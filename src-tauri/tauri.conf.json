@@ -12,9 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "virtual-stream-deck",
+        "title": "Virtual Stream Deck",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true
       }
     ],
     "security": {
