@@ -1,24 +1,26 @@
-import './App.css';
+import { useEffect, useState } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import Osd from './Osd';
+import Dashboard from './Dashboard';
 
 function App() {
-  const buttons = Array.from({ length: 9 }, (_, i) => i + 1);
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
 
-  return (
-    <main data-tauri-drag-region className="deck-container">
-      <div className="status-bar">
-        <span>Numpad Deck</span>
-        <div className="dot" />
-      </div>
+  useEffect(() => {
+    // Determine which window is currently rendering
+    setWindowLabel(getCurrentWindow().label);
+  }, []);
 
-      <div className="button-grid">
-        {buttons.map((btn) => (
-          <button key={btn} className="deck-button">
-            {btn}
-          </button>
-        ))}
-      </div>
-    </main>
-  );
+  if (windowLabel === 'osd') {
+    return <Osd />;
+  }
+
+  if (windowLabel === 'dashboard') {
+    return <Dashboard />;
+  }
+
+  // Fallback while detecting or if window label doesn't match
+  return <div style={{ color: 'white' }}>Loading...</div>;
 }
 
 export default App;

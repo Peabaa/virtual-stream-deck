@@ -12,15 +12,26 @@
   "app": {
     "windows": [
       {
-        "label": "main",
-        "title": "Virtual Stream Deck",
+        "label": "dashboard",
+        "title": "Virtual Stream Deck - Dashboard",
+        "width": 1000,
+        "height": 700,
+        "resizable": true,
+        "transparent": false,
+        "decorations": true,
+        "visible": true
+      },
+      {
+        "label": "osd",
+        "title": "On-Screen Display",
         "width": 800,
         "height": 600,
         "resizable": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "visible": false
       }
     ],
     "security": {
