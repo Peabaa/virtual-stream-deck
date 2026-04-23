@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { loadActiveProfile, DeckProfile, DEFAULT_PROFILE } from './store';
+import { loadProfiles, loadEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import './App.css';
 
 function Osd() {
   const [profile, setProfile] = useState<DeckProfile>(DEFAULT_PROFILE);
 
   const fetchProfile = async () => {
-    const p = await loadActiveProfile();
+    const eqId = await loadEquippedProfileId();
+    const profilesList = await loadProfiles();
+    const p = profilesList[eqId] || DEFAULT_PROFILE;
     setProfile(p);
   };
 

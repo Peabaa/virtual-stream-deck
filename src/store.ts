@@ -14,7 +14,6 @@ export interface DeckProfile {
   buttons: Record<string, DeckButtonData>; // Mapping of coordinate ID to button data
 }
 
-// A default 3x3 profile if nothing exists
 export const DEFAULT_PROFILE: DeckProfile = {
   id: 'default',
   name: 'Default Numpad',
@@ -32,16 +31,33 @@ export async function getStore(): Promise<Store> {
   return storeInstance;
 }
 
-export async function loadActiveProfile(): Promise<DeckProfile> {
+// MULTI-PROFILE STORAGE API
+export async function loadProfiles(): Promise<Record<string, DeckProfile>> {
   const store = await getStore();
-  // Force a reload from disk to ensure cross-window sync
-  try { await store.reload(); } catch (e) {}
-  const profile = await store.get<DeckProfile>('activeProfile');
-  return profile || DEFAULT_PROFILE;
+  try { await store.reload(); } catch (e) {} // Ensure fresh read
+  const profiles = await store.get<Record<string, DeckProfile>>('profiles');
+  
+  if (!profiles || Object.keys(profiles).length === 0) {
+    return { 'default': DEFAULT_PROFILE };
+  }
+  return profiles;
 }
 
-export async function saveActiveProfile(profile: DeckProfile) {
+export async function saveProfiles(profiles: Record<string, DeckProfile>) {
   const store = await getStore();
-  await store.set('activeProfile', profile);
+  await store.set('profiles', profiles);
+  await store.save();
+}
+
+export async function loadEquippedProfileId(): Promise<string> {
+  const store = await getStore();
+  try { await store.reload(); } catch (e) {}
+  const equippedId = await store.get<string>('equippedProfileId');
+  return equippedId || 'default';
+}
+
+export async function saveEquippedProfileId(id: string) {
+  const store = await getStore();
+  await store.set('equippedProfileId', id);
   await store.save();
 }
