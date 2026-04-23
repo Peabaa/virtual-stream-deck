@@ -120,6 +120,35 @@ function Dashboard() {
     await emit('profile_updated');
   };
 
+  const handleDeleteProfile = async () => {
+    if (Object.keys(profiles).length <= 1) {
+      alert("You cannot delete the last remaining profile.");
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to permanently delete the profile "${draftProfile.name}"?`)) {
+      const updatedProfiles = { ...profiles };
+      delete updatedProfiles[activeProfileId];
+      
+      setProfiles(updatedProfiles);
+      await saveProfiles(updatedProfiles);
+      
+      // Fallback to the next available profile
+      const fallbackId = Object.keys(updatedProfiles)[0];
+      setActiveProfileId(fallbackId);
+      setDraftProfile(updatedProfiles[fallbackId]);
+      setHasUnsavedChanges(false);
+      setSelectedButtonId(null);
+
+      // If we just deleted the actively equipped profile, we MUST auto-equip the fallback profile
+      if (activeProfileId === equippedProfileId) {
+        setEquippedProfileId(fallbackId);
+        await saveEquippedProfileId(fallbackId);
+        await emit('profile_updated');
+      }
+    }
+  };
+
   // ---- Editor Actions ----
 
   const updateDraft = (newDraft: DeckProfile) => {
@@ -199,6 +228,23 @@ function Dashboard() {
             }}
           >
             {activeProfileId === equippedProfileId ? "Equipped" : "Equip Profile"}
+          </button>
+
+          <button 
+            onClick={handleDeleteProfile}
+            disabled={Object.keys(profiles).length <= 1}
+            style={{ 
+              padding: '6px 12px', 
+              cursor: Object.keys(profiles).length <= 1 ? 'not-allowed' : 'pointer',
+              backgroundColor: '#d32f2f',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              marginLeft: '10px'
+            }}
+          >
+            🗑️ Delete
           </button>
         </div>
       </div>
