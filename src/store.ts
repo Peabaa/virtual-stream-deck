@@ -1,9 +1,17 @@
 import { load, Store } from '@tauri-apps/plugin-store';
 
+export type ActionType = 'none' | 'open_url';
+
+export interface DeckButtonAction {
+  type: ActionType;
+  payload: string;
+}
+
 export interface DeckButtonData {
   id: string; // Format: "x,y" (e.g. "0,0")
   label: string;
   color: string;
+  action?: DeckButtonAction;
 }
 
 export interface DeckProfile {

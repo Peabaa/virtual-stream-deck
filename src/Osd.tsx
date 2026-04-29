@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-shell';
 import { loadProfiles, loadEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import './App.css';
 
@@ -49,10 +50,27 @@ function Osd() {
           Array.from({ length: profile.columns }).map((_, x) => {
             const id = `${x},${y}`;
             const btnData = profile.buttons[id];
-            
+            const handleAction = async () => {
+              if (btnData?.action?.type === 'open_url' && btnData.action.payload) {
+                let target = btnData.action.payload.trim();
+                
+                // If it looks like a domain (e.g. youtube.com) and has no protocol, automatically add https://
+                if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) {
+                  target = 'https://' + target;
+                }
+
+                try {
+                  await open(target);
+                } catch (e) {
+                  console.error("Failed to execute action:", e);
+                }
+              }
+            };
+
             return (
               <button 
                 key={id} 
+                onClick={handleAction}
                 className="deck-button"
                 style={{
                   backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',

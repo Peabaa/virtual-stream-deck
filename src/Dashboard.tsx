@@ -3,7 +3,7 @@ import HotkeyInput from './HotkeyInput';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit } from '@tauri-apps/api/event';
-import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE } from './store';
+import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 
 function Dashboard() {
   const [osdHotkey, setOsdHotkey] = useState<string>('');
@@ -333,7 +333,37 @@ function Dashboard() {
                   />
                 </div>
                 <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#888', fontStyle: 'italic' }}>Action binding will be implemented in the next phase!</p>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Action Engine</label>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Action Type</label>
+                    <select 
+                      value={selectedButtonData.action?.type || 'none'}
+                      onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                        action: { type: e.target.value as ActionType, payload: selectedButtonData.action?.payload || '' } 
+                      })}
+                      style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                    >
+                      <option value="none">None</option>
+                      <option value="open_url">Open URL / App / File</option>
+                    </select>
+                  </div>
+
+                  {selectedButtonData.action?.type === 'open_url' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Payload</label>
+                      <input 
+                        type="text" 
+                        placeholder="https://youtube.com or C:/app.exe"
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: selectedButtonData.action!.type, payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Enter a web link or an absolute file path.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
