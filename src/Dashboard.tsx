@@ -450,6 +450,8 @@ function Dashboard() {
                       />
                     )}
                     <input 
+                      key={selectedButtonData.id}
+                      id="icon-upload-input"
                       type="file" 
                       accept="image/*" 
                       onChange={(e) => {
@@ -461,7 +463,11 @@ function Dashboard() {
                     />
                     {selectedButtonData.imageUrl && (
                       <button 
-                        onClick={() => handleButtonUpdate(selectedButtonData.id, { imageUrl: '' })}
+                        onClick={() => {
+                          handleButtonUpdate(selectedButtonData.id, { imageUrl: '' });
+                          const input = document.getElementById('icon-upload-input') as HTMLInputElement;
+                          if (input) input.value = '';
+                        }}
                         style={{ padding: '6px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                         title="Remove Icon"
                       >
