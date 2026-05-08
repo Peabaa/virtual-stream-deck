@@ -19,6 +19,7 @@ export interface DeckProfile {
   id: string;
   name: string;
   osdHotkey?: string;
+  requireOsdVisible?: boolean;
   rows: number;
   columns: number;
   buttons: Record<string, DeckButtonData>; // Mapping of coordinate ID to button data

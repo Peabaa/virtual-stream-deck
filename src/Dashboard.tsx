@@ -304,13 +304,28 @@ function Dashboard() {
           
           <div style={{ padding: '20px', backgroundColor: '#222', borderRadius: '12px', border: '1px solid #333' }}>
             <h3 style={{ marginTop: 0 }}>Global Settings</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '0.9rem', color: '#aaa' }}>OSD Toggle Hotkey:</label>
-              <HotkeyInput 
-                value={draftProfile.osdHotkey || ''} 
-                onChange={val => updateDraft({ ...draftProfile, osdHotkey: val })} 
-              />
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Must be saved and equipped to take effect.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>OSD Toggle Hotkey:</label>
+                <HotkeyInput 
+                  value={draftProfile.osdHotkey || ''} 
+                  onChange={val => updateDraft({ ...draftProfile, osdHotkey: val })} 
+                />
+                <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Must be saved and equipped to take effect.</p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input 
+                  type="checkbox" 
+                  id="requireOsdVisible"
+                  checked={!!draftProfile.requireOsdVisible}
+                  onChange={e => updateDraft({ ...draftProfile, requireOsdVisible: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="requireOsdVisible" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>
+                  Require OSD to be visible for hotkeys to work
+                </label>
+              </div>
             </div>
           </div>
 

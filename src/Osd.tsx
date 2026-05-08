@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { loadProfiles, loadEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import './App.css';
 
@@ -38,6 +39,16 @@ function Osd() {
           
           await register(btn.triggerHotkey, async (event) => {
             if (event.state !== "Pressed") return;
+
+            // Check if the user requires the OSD to be visible for hotkeys to work
+            if (p.requireOsdVisible) {
+              const osdWindow = await WebviewWindow.getByLabel('osd');
+              if (osdWindow) {
+                const isVisible = await osdWindow.isVisible();
+                if (!isVisible) return; // Abort execution
+              }
+            }
+
             // Execute the action payload silently in the background
             if (btn.action?.type === 'open_url' && btn.action.payload) {
               let target = btn.action.payload.trim();
