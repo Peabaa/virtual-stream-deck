@@ -11,6 +11,7 @@ export interface DeckButtonData {
   id: string; // Format: "x,y" (e.g. "0,0")
   label: string;
   color: string;
+  imageUrl?: string;
   action?: DeckButtonAction;
   triggerHotkey?: string;
 }

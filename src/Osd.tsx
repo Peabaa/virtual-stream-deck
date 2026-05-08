@@ -150,9 +150,27 @@ function Osd() {
                 className="deck-button"
                 style={{
                   backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px',
+                  overflow: 'hidden',
+                  padding: '5px'
                 }}
               >
-                {btnData?.label || id}
+                {btnData?.imageUrl && (
+                  <img src={btnData.imageUrl} alt="" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                )}
+                <span style={{ 
+                  fontSize: '0.9rem', 
+                  whiteSpace: 'nowrap', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  maxWidth: '100%' 
+                }}>
+                  {btnData?.label || id}
+                </span>
               </button>
             );
           })

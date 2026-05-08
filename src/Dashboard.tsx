@@ -187,6 +187,43 @@ function Dashboard() {
     updateDraft({ ...draftProfile, buttons: newButtons });
   };
 
+  const handleImageUpload = (id: string, file: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Downscale to 128x128 max
+        const MAX_SIZE = 128;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round(height * (MAX_SIZE / width));
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round(width * (MAX_SIZE / height));
+            height = MAX_SIZE;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        const dataUrl = canvas.toDataURL('image/png');
+        handleButtonUpdate(id, { imageUrl: dataUrl });
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const selectedButtonData = selectedButtonId 
     ? (draftProfile.buttons[selectedButtonId] || { id: selectedButtonId, label: selectedButtonId, color: 'rgba(255, 255, 255, 0.08)' })
     : null;
@@ -320,10 +357,28 @@ function Dashboard() {
                       border: isSelected ? '2px solid #396cd8' : '1px solid rgba(255,255,255,0.1)',
                       borderRadius: '8px',
                       cursor: 'pointer',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      overflow: 'hidden',
+                      padding: '5px'
                     }}
                   >
-                    {btnData?.label || id}
+                    {btnData?.imageUrl && (
+                      <img src={btnData.imageUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                    )}
+                    <span style={{ 
+                      fontSize: '0.8rem', 
+                      whiteSpace: 'nowrap', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      maxWidth: '100%' 
+                    }}>
+                      {btnData?.label || id}
+                    </span>
                   </button>
                 );
               })
@@ -383,6 +438,37 @@ function Dashboard() {
                     onChange={e => handleButtonUpdate(selectedButtonData.id, { color: e.target.value })}
                     style={{ width: '100%', height: '40px', cursor: 'pointer' }}
                   />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px' }}>Icon Image</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {selectedButtonData.imageUrl && (
+                      <img 
+                        src={selectedButtonData.imageUrl} 
+                        alt="icon preview" 
+                        style={{ width: '40px', height: '40px', objectFit: 'contain', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px' }} 
+                      />
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleImageUpload(selectedButtonData.id, e.target.files[0]);
+                        }
+                      }}
+                      style={{ flexGrow: 1 }}
+                    />
+                    {selectedButtonData.imageUrl && (
+                      <button 
+                        onClick={() => handleButtonUpdate(selectedButtonData.id, { imageUrl: '' })}
+                        style={{ padding: '6px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        title="Remove Icon"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Action Engine</label>
