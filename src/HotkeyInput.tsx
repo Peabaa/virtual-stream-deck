@@ -51,26 +51,54 @@ export default function HotkeyInput({ value, onChange }: HotkeyInputProps) {
   };
 
   return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsListening(true);
-      }}
-      onKeyDown={handleKeyDown}
-      style={{
-        padding: '10px 16px',
-        backgroundColor: isListening ? '#396cd8' : '#333',
-        color: 'white',
-        border: '1px solid rgba(255,255,255,0.2)',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        fontSize: '1rem',
-        minWidth: '200px',
-        transition: 'background-color 0.2s',
-      }}
-    >
-      {isListening ? 'Press any combination...' : (value || 'Click to set hotkey')}
-    </button>
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsListening(true);
+        }}
+        onKeyDown={handleKeyDown}
+        style={{
+          padding: '10px 16px',
+          backgroundColor: isListening ? '#396cd8' : '#333',
+          color: 'white',
+          border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: 'bold',
+          fontSize: '1rem',
+          flexGrow: 1,
+          transition: 'background-color 0.2s',
+          textAlign: 'left'
+        }}
+      >
+        {isListening ? 'Press any combination...' : (value || 'Click to set hotkey')}
+      </button>
+      
+      {value && !isListening && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange('');
+          }}
+          style={{
+            padding: '10px 16px',
+            backgroundColor: 'rgba(211, 47, 47, 0.2)',
+            color: '#ef5350',
+            border: '1px solid rgba(211, 47, 47, 0.4)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '1rem',
+            transition: 'background-color 0.2s',
+          }}
+          title="Clear hotkey binding"
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.4)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.2)'}
+        >
+          ✕
+        </button>
+      )}
+    </div>
   );
 }
