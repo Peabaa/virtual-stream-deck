@@ -167,7 +167,8 @@ function Osd() {
                   whiteSpace: 'nowrap', 
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis', 
-                  maxWidth: '100%' 
+                  maxWidth: '100%',
+                  color: btnData?.fontColor || 'white'
                 }}>
                   {btnData?.label || id}
                 </span>

@@ -375,7 +375,8 @@ function Dashboard() {
                       whiteSpace: 'nowrap', 
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis', 
-                      maxWidth: '100%' 
+                      maxWidth: '100%',
+                      color: btnData?.fontColor || 'white'
                     }}>
                       {btnData?.label || id}
                     </span>
@@ -430,14 +431,25 @@ function Dashboard() {
                     style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>Color</label>
-                  <input 
-                    type="color" 
-                    value={selectedButtonData.color.startsWith('#') ? selectedButtonData.color : '#333333'} 
-                    onChange={e => handleButtonUpdate(selectedButtonData.id, { color: e.target.value })}
-                    style={{ width: '100%', height: '40px', cursor: 'pointer' }}
-                  />
+                <div style={{ display: 'flex', gap: '15px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px' }}>Background</label>
+                    <input 
+                      type="color" 
+                      value={selectedButtonData.color.startsWith('#') ? selectedButtonData.color : '#333333'} 
+                      onChange={e => handleButtonUpdate(selectedButtonData.id, { color: e.target.value })}
+                      style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px' }}>Text Color</label>
+                    <input 
+                      type="color" 
+                      value={selectedButtonData.fontColor?.startsWith('#') ? selectedButtonData.fontColor : '#ffffff'} 
+                      onChange={e => handleButtonUpdate(selectedButtonData.id, { fontColor: e.target.value })}
+                      style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '5px' }}>Icon Image</label>
