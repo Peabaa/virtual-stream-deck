@@ -6,8 +6,6 @@ import { emit } from '@tauri-apps/api/event';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 
 function Dashboard() {
-  const [osdHotkey, setOsdHotkey] = useState<string>('');
-  
   // Profile Management State
   const [profiles, setProfiles] = useState<Record<string, DeckProfile>>({});
   const [activeProfileId, setActiveProfileId] = useState<string>('default');
@@ -30,9 +28,12 @@ function Dashboard() {
     });
   }, []);
 
+  // The active hotkey is the one saved in the CURRENTLY EQUIPPED profile
+  const activeOsdHotkey = profiles[equippedProfileId]?.osdHotkey || '';
+
   // Hotkey hook logic...
   useEffect(() => {
-    let activeHotkey = osdHotkey;
+    let activeHotkey = activeOsdHotkey;
     const setupShortcut = async () => {
       try {
         if (!activeHotkey) return;
@@ -57,7 +58,7 @@ function Dashboard() {
     };
     setupShortcut();
     return () => { if (activeHotkey) unregister(activeHotkey).catch(console.error); };
-  }, [osdHotkey]);
+  }, [activeOsdHotkey]);
 
 
   // ---- Profile Actions ----
@@ -305,7 +306,11 @@ function Dashboard() {
             <h3 style={{ marginTop: 0 }}>Global Settings</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{ fontSize: '0.9rem', color: '#aaa' }}>OSD Toggle Hotkey:</label>
-              <HotkeyInput value={osdHotkey} onChange={setOsdHotkey} />
+              <HotkeyInput 
+                value={draftProfile.osdHotkey || ''} 
+                onChange={val => updateDraft({ ...draftProfile, osdHotkey: val })} 
+              />
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Must be saved and equipped to take effect.</p>
             </div>
           </div>
 
