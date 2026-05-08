@@ -3,6 +3,7 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { invoke } from '@tauri-apps/api/core';
 import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import './App.css';
 
@@ -56,6 +57,18 @@ function Osd() {
                 await emit('profile_updated');
               } catch (e) {
                 console.error("Failed to swap profile folder via hotkey:", e);
+              }
+            } else if (btn.action?.type === 'type_text' && btn.action.payload) {
+              try {
+                await invoke('type_text', { text: btn.action.payload });
+              } catch (e) {
+                console.error("Failed to type text via hotkey:", e);
+              }
+            } else if (btn.action?.type === 'run_macro' && btn.action.payload) {
+              try {
+                await invoke('run_macro', { sequence: btn.action.payload });
+              } catch (e) {
+                console.error("Failed to run macro via hotkey:", e);
               }
             }
           });
@@ -139,6 +152,18 @@ function Osd() {
                   await emit('profile_updated');
                 } catch (e) {
                   console.error("Failed to swap profile folder:", e);
+                }
+              } else if (btnData?.action?.type === 'type_text' && btnData.action.payload) {
+                try {
+                  await invoke('type_text', { text: btnData.action.payload });
+                } catch (e) {
+                  console.error("Failed to type text:", e);
+                }
+              } else if (btnData?.action?.type === 'run_macro' && btnData.action.payload) {
+                try {
+                  await invoke('run_macro', { sequence: btnData.action.payload });
+                } catch (e) {
+                  console.error("Failed to run macro:", e);
                 }
               }
             };

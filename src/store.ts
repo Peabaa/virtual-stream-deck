@@ -1,6 +1,6 @@
 import { load, Store } from '@tauri-apps/plugin-store';
 
-export type ActionType = 'none' | 'open_url' | 'open_folder';
+export type ActionType = 'none' | 'open_url' | 'open_folder' | 'type_text' | 'run_macro';
 
 export interface DeckButtonAction {
   type: ActionType;

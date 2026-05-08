@@ -503,6 +503,8 @@ function Dashboard() {
                       <option value="none">None</option>
                       <option value="open_url">Open URL / App / File</option>
                       <option value="open_folder">Open Folder / Profile</option>
+                      <option value="type_text">Type Text</option>
+                      <option value="run_macro">Run Macro/Shortcut</option>
                     </select>
                   </div>
 
@@ -538,6 +540,37 @@ function Dashboard() {
                         ))}
                       </select>
                       <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Instantly swap your layout to this profile.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'type_text' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Text to Type</label>
+                      <textarea 
+                        placeholder="Hello World! This is a test."
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'type_text', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', resize: 'vertical', minHeight: '60px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Type long paragraphs here. All uppercase letters and symbols are perfectly preserved.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'run_macro' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Macro Sequence</label>
+                      <input 
+                        type="text" 
+                        placeholder="{+CTRL}c{-CTRL}"
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'run_macro', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Wrap modifiers in brackets. Examples: {'{+CTRL}c{-CTRL}'} or {'{ENTER}'}. Do not use for plain text.</p>
                     </div>
                   )}
                 </div>
