@@ -1,17 +1,63 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
+import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { loadProfiles, loadEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import './App.css';
 
 function Osd() {
   const [profile, setProfile] = useState<DeckProfile>(DEFAULT_PROFILE);
+  const registeredHotkeysRef = useRef<string[]>([]);
 
   const fetchProfile = async () => {
     const eqId = await loadEquippedProfileId();
     const profilesList = await loadProfiles();
     const p = profilesList[eqId] || DEFAULT_PROFILE;
     setProfile(p);
+    setupHotkeys(p);
+  };
+
+  const setupHotkeys = async (p: DeckProfile) => {
+    // Unregister old button hotkeys
+    for (const hk of registeredHotkeysRef.current) {
+      if (hk) {
+        try { await unregister(hk); } catch(e) {}
+      }
+    }
+    registeredHotkeysRef.current = [];
+
+    const newHotkeys: string[] = [];
+
+    // Register new hotkeys for every button that has one
+    for (const id in p.buttons) {
+      const btn = p.buttons[id];
+      if (btn.triggerHotkey) {
+        try {
+          const registered = await isRegistered(btn.triggerHotkey);
+          if (registered) await unregister(btn.triggerHotkey).catch(()=>{});
+          
+          await register(btn.triggerHotkey, async (event) => {
+            if (event.state !== "Pressed") return;
+            // Execute the action payload silently in the background
+            if (btn.action?.type === 'open_url' && btn.action.payload) {
+              let target = btn.action.payload.trim();
+              if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) {
+                target = 'https://' + target;
+              }
+              try {
+                await open(target);
+              } catch (e) {
+                console.error("Failed to execute action via hotkey:", e);
+              }
+            }
+          });
+          newHotkeys.push(btn.triggerHotkey);
+        } catch (e) {
+          console.error("Failed to register button hotkey", btn.triggerHotkey, e);
+        }
+      }
+    }
+    registeredHotkeysRef.current = newHotkeys;
   };
 
   useEffect(() => {
@@ -29,6 +75,10 @@ function Osd() {
     return () => {
       unlisten.then(f => f());
       window.removeEventListener('focus', handleFocus);
+      // Clean up global shortcuts when OSD unmounts
+      registeredHotkeysRef.current.forEach(hk => {
+        if(hk) unregister(hk).catch(()=>{});
+      });
     };
   }, []);
 

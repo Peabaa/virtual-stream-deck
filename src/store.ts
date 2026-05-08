@@ -12,6 +12,7 @@ export interface DeckButtonData {
   label: string;
   color: string;
   action?: DeckButtonAction;
+  triggerHotkey?: string;
 }
 
 export interface DeckProfile {

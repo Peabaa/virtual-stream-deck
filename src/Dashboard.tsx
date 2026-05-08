@@ -370,6 +370,17 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
+
+                <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Hardware Trigger</label>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Physical Key Binding</label>
+                  <HotkeyInput 
+                    value={selectedButtonData.triggerHotkey || ''} 
+                    onChange={val => handleButtonUpdate(selectedButtonData.id, { triggerHotkey: val })} 
+                  />
+                  <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Pressing this key will silently trigger the Action Payload.</p>
+                </div>
+
               </div>
             ) : (
               <p style={{ color: '#aaa' }}>Click a button in the grid to edit its appearance.</p>
