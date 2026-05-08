@@ -200,17 +200,31 @@ function Dashboard() {
         <div style={{ padding: '15px', backgroundColor: '#2a2a2a', borderRadius: '8px', border: '1px solid #444', display: 'flex', gap: '15px', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Editing Profile:</label>
-            <select 
-              value={activeProfileId} 
-              onChange={(e) => handleSwitchProfile(e.target.value)}
-              style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
-            >
-              {Object.values(profiles).map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.id === equippedProfileId ? '(Equipped)' : ''}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', gap: '5px' }}>
+              <select 
+                value={activeProfileId} 
+                onChange={(e) => handleSwitchProfile(e.target.value)}
+                style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                {Object.values(profiles).map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.id === equippedProfileId ? '(Equipped)' : ''}
+                  </option>
+                ))}
+              </select>
+              <button 
+                onClick={() => {
+                  const newName = window.prompt("Enter new profile name:", draftProfile.name);
+                  if (newName && newName.trim() !== '') {
+                    updateDraft({ ...draftProfile, name: newName.trim() });
+                  }
+                }}
+                style={{ padding: '6px 10px', cursor: 'pointer', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                title="Rename Profile"
+              >
+                ✏️
+              </button>
+            </div>
           </div>
           
           <button onClick={handleCreateNewProfile} style={{ padding: '6px 12px', cursor: 'pointer' }}>+ New</button>
