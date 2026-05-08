@@ -360,12 +360,13 @@ function Dashboard() {
                     <select 
                       value={selectedButtonData.action?.type || 'none'}
                       onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                        action: { type: e.target.value as ActionType, payload: selectedButtonData.action?.payload || '' } 
+                        action: { type: e.target.value as ActionType, payload: '' } 
                       })}
                       style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
                     >
                       <option value="none">None</option>
                       <option value="open_url">Open URL / App / File</option>
+                      <option value="open_folder">Open Folder / Profile</option>
                     </select>
                   </div>
 
@@ -377,11 +378,30 @@ function Dashboard() {
                         placeholder="https://youtube.com or C:/app.exe"
                         value={selectedButtonData.action?.payload || ''} 
                         onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: selectedButtonData.action!.type, payload: e.target.value } 
+                          action: { type: 'open_url', payload: e.target.value } 
                         })}
                         style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
                       />
                       <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Enter a web link or an absolute file path.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'open_folder' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Folder</label>
+                      <select 
+                        value={selectedButtonData.action?.payload || ''}
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'open_folder', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      >
+                        <option value="" disabled>Select a profile...</option>
+                        {Object.values(profiles).map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Instantly swap your layout to this profile.</p>
                     </div>
                   )}
                 </div>

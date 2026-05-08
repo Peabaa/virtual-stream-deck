@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { loadProfiles, loadEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
+import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import './App.css';
 
 function Osd() {
@@ -19,7 +19,6 @@ function Osd() {
   };
 
   const setupHotkeys = async (p: DeckProfile) => {
-    // Unregister old button hotkeys
     for (const hk of registeredHotkeysRef.current) {
       if (hk) {
         try { await unregister(hk); } catch(e) {}
@@ -29,7 +28,6 @@ function Osd() {
 
     const newHotkeys: string[] = [];
 
-    // Register new hotkeys for every button that has one
     for (const id in p.buttons) {
       const btn = p.buttons[id];
       if (btn.triggerHotkey) {
@@ -40,25 +38,24 @@ function Osd() {
           await register(btn.triggerHotkey, async (event) => {
             if (event.state !== "Pressed") return;
 
-            // Check if the user requires the OSD to be visible for hotkeys to work
             if (p.requireOsdVisible) {
               const osdWindow = await WebviewWindow.getByLabel('osd');
               if (osdWindow) {
                 const isVisible = await osdWindow.isVisible();
-                if (!isVisible) return; // Abort execution
+                if (!isVisible) return; 
               }
             }
 
-            // Execute the action payload silently in the background
             if (btn.action?.type === 'open_url' && btn.action.payload) {
               let target = btn.action.payload.trim();
-              if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) {
-                target = 'https://' + target;
-              }
+              if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) target = 'https://' + target;
+              try { await open(target); } catch (e) { console.error("Failed to execute action via hotkey:", e); }
+            } else if (btn.action?.type === 'open_folder' && btn.action.payload) {
               try {
-                await open(target);
+                await saveEquippedProfileId(btn.action.payload);
+                await emit('profile_updated');
               } catch (e) {
-                console.error("Failed to execute action via hotkey:", e);
+                console.error("Failed to swap profile folder via hotkey:", e);
               }
             }
           });
@@ -115,7 +112,6 @@ function Osd() {
               if (btnData?.action?.type === 'open_url' && btnData.action.payload) {
                 let target = btnData.action.payload.trim();
                 
-                // If it looks like a domain (e.g. youtube.com) and has no protocol, automatically add https://
                 if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) {
                   target = 'https://' + target;
                 }
@@ -124,6 +120,13 @@ function Osd() {
                   await open(target);
                 } catch (e) {
                   console.error("Failed to execute action:", e);
+                }
+              } else if (btnData?.action?.type === 'open_folder' && btnData.action.payload) {
+                try {
+                  await saveEquippedProfileId(btnData.action.payload);
+                  await emit('profile_updated');
+                } catch (e) {
+                  console.error("Failed to swap profile folder:", e);
                 }
               }
             };
