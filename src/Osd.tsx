@@ -105,7 +105,7 @@ function Osd() {
   return (
     <main data-tauri-drag-region className="deck-container">
       <div className="status-bar">
-        <span>Numpad Deck</span>
+        <span>{profile.name}</span>
         <div className="dot" />
       </div>
 
