@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import HotkeyInput from './HotkeyInput';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { emit } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 
 function Dashboard() {
@@ -34,9 +34,11 @@ function Dashboard() {
   // Hotkey hook logic...
   useEffect(() => {
     let activeHotkey = activeOsdHotkey;
+    let isPaused = false;
+
     const setupShortcut = async () => {
       try {
-        if (!activeHotkey) return;
+        if (isPaused || !activeHotkey) return;
         const registered = await isRegistered(activeHotkey);
         if (registered) await unregister(activeHotkey).catch(() => {});
         
@@ -56,8 +58,24 @@ function Dashboard() {
         });
       } catch (err) { console.error('Failed to register shortcut:', err); }
     };
+
+    const unlistenPause = listen('pause_hotkeys', async () => {
+      isPaused = true;
+      if (activeHotkey) await unregister(activeHotkey).catch(() => {});
+    });
+
+    const unlistenResume = listen('resume_hotkeys', () => {
+      isPaused = false;
+      setupShortcut();
+    });
+
     setupShortcut();
-    return () => { if (activeHotkey) unregister(activeHotkey).catch(console.error); };
+
+    return () => { 
+      unlistenPause.then(f => f());
+      unlistenResume.then(f => f());
+      if (activeHotkey) unregister(activeHotkey).catch(console.error); 
+    };
   }, [activeOsdHotkey]);
 
 

@@ -1,4 +1,5 @@
 import { useState, KeyboardEvent, useEffect } from 'react';
+import { emit } from '@tauri-apps/api/event';
 
 interface HotkeyInputProps {
   value: string;
@@ -13,6 +14,10 @@ export default function HotkeyInput({ value, onChange }: HotkeyInputProps) {
     const handleWindowClick = () => setIsListening(false);
     if (isListening) {
       window.addEventListener('click', handleWindowClick);
+      emit('pause_hotkeys');
+    } else {
+      // Small delay to ensure the OS releases the key before re-arming the global hooks
+      setTimeout(() => { emit('resume_hotkeys'); }, 50);
     }
     return () => window.removeEventListener('click', handleWindowClick);
   }, [isListening]);

@@ -76,12 +76,24 @@ function Osd() {
       fetchProfile();
     });
 
+    const unlistenPause = listen('pause_hotkeys', async () => {
+      for (const hk of registeredHotkeysRef.current) {
+        if(hk) await unregister(hk).catch(()=>{});
+      }
+    });
+
+    const unlistenResume = listen('resume_hotkeys', () => {
+      fetchProfile();
+    });
+
     // Fallback: forcefully fetch the latest profile whenever the OSD window gains focus/visibility
     const handleFocus = () => fetchProfile();
     window.addEventListener('focus', handleFocus);
 
     return () => {
       unlisten.then(f => f());
+      unlistenPause.then(f => f());
+      unlistenResume.then(f => f());
       window.removeEventListener('focus', handleFocus);
       // Clean up global shortcuts when OSD unmounts
       registeredHotkeysRef.current.forEach(hk => {
