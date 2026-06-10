@@ -71,7 +71,8 @@ html, body, #root {
   transform: translateY(-2px);
 }
 
-.deck-button:active {
+.deck-button:active,
+.deck-button.active-simulated {
   transform: scale(0.95);
   background: rgba(57, 108, 216, 0.4);
 }

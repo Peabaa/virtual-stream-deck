@@ -10,6 +10,7 @@ import './App.css';
 
 function Osd() {
   const [profile, setProfile] = useState<DeckProfile>(DEFAULT_PROFILE);
+  const [activeButtonId, setActiveButtonId] = useState<string | null>(null);
   const registeredHotkeysRef = useRef<string[]>([]);
 
   const fetchProfile = async () => {
@@ -39,6 +40,12 @@ function Osd() {
           
           await register(btn.triggerHotkey, async (event) => {
             if (event.state !== "Pressed") return;
+
+            // Trigger visual glow
+            setActiveButtonId(id);
+            setTimeout(() => {
+              setActiveButtonId(prev => prev === id ? null : prev);
+            }, 150);
 
             if (p.requireOsdVisible) {
               const osdWindow = await WebviewWindow.getByLabel('osd');
@@ -173,7 +180,7 @@ function Osd() {
               <button 
                 key={id} 
                 onClick={handleAction}
-                className="deck-button"
+                className={`deck-button ${activeButtonId === id ? 'active-simulated' : ''}`}
                 style={{
                   backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
                   display: 'flex',
