@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import HotkeyInput from './HotkeyInput';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -14,6 +14,11 @@ function Dashboard() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   
   const [selectedButtonId, setSelectedButtonId] = useState<string | null>(null);
+  const [dragSourceId, setDragSourceId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragSourceRef = useRef<string | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // Load initial profiles on mount
   useEffect(() => {
@@ -169,6 +174,65 @@ function Dashboard() {
   };
 
   // ---- Editor Actions ----
+
+  const swapButtons = useCallback((sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return;
+    setDraftProfile(prev => {
+      const newButtons = { ...prev.buttons };
+      const sourceBtn = newButtons[sourceId];
+      const targetBtn = newButtons[targetId];
+      if (sourceBtn) newButtons[targetId] = { ...sourceBtn, id: targetId };
+      else delete newButtons[targetId];
+      if (targetBtn) newButtons[sourceId] = { ...targetBtn, id: sourceId };
+      else delete newButtons[sourceId];
+      return { ...prev, buttons: newButtons };
+    });
+    setHasUnsavedChanges(true);
+    setSelectedButtonId(prev => {
+      if (prev === sourceId) return targetId;
+      if (prev === targetId) return sourceId;
+      return prev;
+    });
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    dragSourceRef.current = id;
+    isDraggingRef.current = false;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) {
+        isDraggingRef.current = true;
+        setDragSourceId(dragSourceRef.current);
+      }
+      if (!gridRef.current) return;
+      const el = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY) as HTMLElement | null;
+      const cell = el?.closest('[data-cell-id]') as HTMLElement | null;
+      setDragOverId(cell ? cell.dataset.cellId || null : null);
+    };
+
+    const onMouseUp = (upEvent: MouseEvent) => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      if (isDraggingRef.current) {
+        const el = document.elementFromPoint(upEvent.clientX, upEvent.clientY) as HTMLElement | null;
+        const cell = el?.closest('[data-cell-id]') as HTMLElement | null;
+        const targetId = cell ? cell.dataset.cellId : null;
+        if (targetId && dragSourceRef.current && targetId !== dragSourceRef.current) {
+          swapButtons(dragSourceRef.current, targetId);
+        }
+      }
+
+      dragSourceRef.current = null;
+      isDraggingRef.current = false;
+      setDragSourceId(null);
+      setDragOverId(null);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [swapButtons]);
 
   const updateDraft = (newDraft: DeckProfile) => {
     setDraftProfile(newDraft);
@@ -333,30 +397,40 @@ function Dashboard() {
             </div>
           </div>
 
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: `repeat(${draftProfile.columns}, 1fr)`, 
-            gap: '10px',
-            backgroundColor: '#111',
-            padding: '20px',
-            borderRadius: '8px'
-          }}>
+          <div
+            ref={gridRef}
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: `repeat(${draftProfile.columns}, 1fr)`, 
+              gap: '10px',
+              backgroundColor: '#111',
+              padding: '20px',
+              borderRadius: '8px'
+            }}
+          >
             {Array.from({ length: draftProfile.rows }).map((_, y) => (
               Array.from({ length: draftProfile.columns }).map((_, x) => {
                 const id = `${x},${y}`;
                 const btnData = draftProfile.buttons[id];
                 const isSelected = selectedButtonId === id;
+                const isBeingDragged = dragSourceId === id;
+                const isDropTarget = dragOverId === id && dragSourceId !== id;
                 return (
-                  <button 
+                  <div 
                     key={id}
-                    onClick={() => setSelectedButtonId(id)}
+                    data-cell-id={id}
+                    onClick={() => { if (!isDraggingRef.current) setSelectedButtonId(id); }}
+                    onMouseDown={(e) => handleMouseDown(e, id)}
                     style={{
                       aspectRatio: '1 / 1',
                       backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
                       color: 'white',
-                      border: isSelected ? '2px solid #396cd8' : '1px solid rgba(255,255,255,0.1)',
+                      border: isSelected ? '2px solid #396cd8' : (isDropTarget ? '2px dashed #4caf50' : '1px solid rgba(255,255,255,0.1)'),
+                      opacity: isBeingDragged ? 0.4 : 1,
+                      transform: isDropTarget ? 'scale(1.05)' : 'scale(1)',
+                      transition: 'transform 0.1s ease, opacity 0.1s ease',
                       borderRadius: '8px',
-                      cursor: 'pointer',
+                      cursor: dragSourceId ? 'grabbing' : 'grab',
                       fontWeight: 'bold',
                       display: 'flex',
                       flexDirection: 'column',
@@ -364,11 +438,13 @@ function Dashboard() {
                       justifyContent: 'center',
                       gap: '5px',
                       overflow: 'hidden',
-                      padding: '5px'
+                      padding: '5px',
+                      userSelect: 'none',
+                      boxSizing: 'border-box'
                     }}
                   >
                     {btnData?.imageUrl && (
-                      <img src={btnData.imageUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                      <img src={btnData.imageUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', pointerEvents: 'none' }} />
                     )}
                     <span style={{ 
                       fontSize: '0.8rem', 
@@ -376,11 +452,12 @@ function Dashboard() {
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis', 
                       maxWidth: '100%',
-                      color: btnData?.fontColor || 'white'
+                      color: btnData?.fontColor || 'white',
+                      pointerEvents: 'none'
                     }}>
                       {btnData?.label || id}
                     </span>
-                  </button>
+                  </div>
                 );
               })
             ))}
