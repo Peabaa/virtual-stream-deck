@@ -4,6 +4,7 @@ import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-sh
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
+import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
 
 function Dashboard() {
   // Profile Management State
@@ -16,6 +17,7 @@ function Dashboard() {
   const [selectedButtonId, setSelectedButtonId] = useState<string | null>(null);
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
   const dragSourceRef = useRef<string | null>(null);
   const isDraggingRef = useRef<boolean>(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -443,9 +445,16 @@ function Dashboard() {
                       boxSizing: 'border-box'
                     }}
                   >
-                    {btnData?.imageUrl && (
+                    {btnData?.imageUrl ? (
                       <img src={btnData.imageUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', pointerEvents: 'none' }} />
-                    )}
+                    ) : btnData?.iconName && CURATED_ICONS[btnData.iconName as IconName] ? (
+                      <div style={{ pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {(() => {
+                          const Icon = CURATED_ICONS[btnData.iconName as IconName];
+                          return <Icon size={32} color={btnData.fontColor || 'white'} />;
+                        })()}
+                      </div>
+                    ) : null}
                     <span style={{ 
                       fontSize: '0.8rem', 
                       whiteSpace: 'nowrap', 
@@ -565,6 +574,35 @@ function Dashboard() {
                     )}
                   </div>
                 </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px' }}>Built-in Icon</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {selectedButtonData.iconName && CURATED_ICONS[selectedButtonData.iconName as IconName] ? (
+                      <div style={{ padding: '8px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px', display: 'flex' }}>
+                        {(() => {
+                          const Icon = CURATED_ICONS[selectedButtonData.iconName as IconName];
+                          return <Icon size={24} color="white" />;
+                        })()}
+                      </div>
+                    ) : null}
+                    <button 
+                      onClick={() => setIsIconPickerOpen(true)}
+                      style={{ padding: '8px 12px', flexGrow: 1, backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Choose Built-in Icon...
+                    </button>
+                    {selectedButtonData.iconName && (
+                      <button 
+                        onClick={() => handleButtonUpdate(selectedButtonData.id, { iconName: undefined })}
+                        style={{ padding: '6px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        title="Remove Built-in Icon"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Action Engine</label>
                   
@@ -670,6 +708,16 @@ function Dashboard() {
 
         </div>
       </div>
+      
+      <IconPicker 
+        isOpen={isIconPickerOpen} 
+        onClose={() => setIsIconPickerOpen(false)} 
+        onSelect={(iconName) => {
+          if (selectedButtonId) {
+            handleButtonUpdate(selectedButtonId, { iconName });
+          }
+        }} 
+      />
     </div>
   );
 }

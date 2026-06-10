@@ -13,6 +13,7 @@ export interface DeckButtonData {
   color: string;
   fontColor?: string;
   imageUrl?: string;
+  iconName?: string;
   action?: DeckButtonAction;
   triggerHotkey?: string;
 }

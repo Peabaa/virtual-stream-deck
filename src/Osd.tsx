@@ -5,6 +5,7 @@ import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-sh
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { invoke } from '@tauri-apps/api/core';
 import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
+import { CURATED_ICONS, IconName } from './IconPicker';
 import './App.css';
 
 function Osd() {
@@ -184,9 +185,16 @@ function Osd() {
                   padding: '5px'
                 }}
               >
-                {btnData?.imageUrl && (
+                {btnData?.imageUrl ? (
                   <img src={btnData.imageUrl} alt="" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
-                )}
+                ) : btnData?.iconName && CURATED_ICONS[btnData.iconName as IconName] ? (
+                  <div style={{ pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {(() => {
+                      const Icon = CURATED_ICONS[btnData.iconName as IconName];
+                      return <Icon size={36} color={btnData.fontColor || 'white'} />;
+                    })()}
+                  </div>
+                ) : null}
                 <span style={{ 
                   fontSize: '0.9rem', 
                   whiteSpace: 'nowrap', 
