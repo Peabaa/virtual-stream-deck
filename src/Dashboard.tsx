@@ -5,6 +5,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
+import { ActionPicker, ACTION_DEFS } from './ActionPicker';
 import { obsService, ConnectionStatus, ObsState } from './obsService';
 
 function Dashboard() {
@@ -19,6 +20,7 @@ function Dashboard() {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
+  const [isActionPickerOpen, setIsActionPickerOpen] = useState<boolean>(false);
   const [currentTab, setCurrentTab] = useState<'editor' | 'settings'>('editor');
   const [obsStatus, setObsStatus] = useState<ConnectionStatus>(obsService.getStatus());
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
@@ -629,29 +631,37 @@ function Dashboard() {
                 <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Action Engine</label>
                   
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Action Type</label>
-                    <select 
-                      value={selectedButtonData.action?.type || 'none'}
-                      onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                        action: { type: e.target.value as ActionType, payload: '' } 
-                      })}
-                      style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Action Type</label>
+                    <button 
+                      onClick={() => setIsActionPickerOpen(true)}
+                      style={{ 
+                        width: '100%', padding: '12px 15px', boxSizing: 'border-box', 
+                        backgroundColor: 'rgba(57, 108, 216, 0.1)', color: '#74b9ff', 
+                        border: '1px solid rgba(57, 108, 216, 0.4)', borderRadius: '8px', 
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                        transition: 'all 0.2s', textAlign: 'left'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.2)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.1)'; }}
                     >
-                      <option value="none">None</option>
-                      <option value="open_url">Open URL / App / File</option>
-                      <option value="open_folder">Open Folder / Profile</option>
-                      <option value="type_text">Type Text</option>
-                      <option value="run_macro">Run Macro/Shortcut</option>
-                      <option disabled>──────────</option>
-                      <option value="obs_switch_scene">OBS: Switch Scene</option>
-                      <option value="obs_toggle_source">OBS: Toggle Source Visibility</option>
-                      <option value="obs_toggle_mute">OBS: Toggle Audio Mute</option>
-                      <option value="obs_toggle_stream">OBS: Toggle Stream</option>
-                      <option value="obs_toggle_record">OBS: Toggle Record</option>
-                      <option value="obs_toggle_virtual_cam">OBS: Toggle Virtual Cam</option>
-                      <option value="obs_take_screenshot">OBS: Take Screenshot</option>
-                    </select>
+                      <span style={{ display: 'flex', alignItems: 'center' }}>
+                        {(() => {
+                          const actionDef = selectedButtonData.action?.type ? ACTION_DEFS[selectedButtonData.action.type] : null;
+                          if (actionDef) {
+                            const Icon = actionDef.icon;
+                            return <Icon size={28} />;
+                          }
+                          return '🚫';
+                        })()}
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '1rem', color: 'white' }}>
+                          {selectedButtonData.action?.type && ACTION_DEFS[selectedButtonData.action.type] ? ACTION_DEFS[selectedButtonData.action.type].label : 'None'}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: '#74b9ff' }}>Click to change action...</span>
+                      </div>
+                    </button>
                   </div>
 
                   {selectedButtonData.action?.type === 'open_url' && (
@@ -926,6 +936,15 @@ function Dashboard() {
             handleButtonUpdate(selectedButtonId, { iconName });
           }
         }} 
+      />
+      <ActionPicker
+        isOpen={isActionPickerOpen}
+        onClose={() => setIsActionPickerOpen(false)}
+        onSelect={(actionType) => {
+          if (selectedButtonId) {
+            handleButtonUpdate(selectedButtonId, { action: { type: actionType, payload: '' } });
+          }
+        }}
       />
     </div>
   );
