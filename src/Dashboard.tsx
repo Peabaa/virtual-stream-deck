@@ -312,7 +312,7 @@ function Dashboard() {
     : null;
 
   return (
-    <div style={{ display: 'flex', color: 'white', fontFamily: 'sans-serif', backgroundColor: '#0f0f13', width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', color: 'white', fontFamily: "'Outfit', sans-serif", backgroundColor: '#0f0f13', width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
       
       {/* Left Sidebar */}
       <div style={{ width: '260px', backgroundColor: 'rgba(20, 20, 25, 0.8)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', padding: '20px', flexShrink: 0 }}>

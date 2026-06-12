@@ -1,3 +1,7 @@
+* {
+  font-family: 'Outfit', sans-serif;
+}
+
 /* 1. Force the entire window to be a transparent "canvas" */
 html, body, #root {
   margin: 0;
