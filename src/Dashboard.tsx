@@ -19,6 +19,7 @@ function Dashboard() {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
+  const [currentTab, setCurrentTab] = useState<'editor' | 'settings'>('editor');
   const [obsStatus, setObsStatus] = useState<ConnectionStatus>(obsService.getStatus());
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
   const [obsUrl, setObsUrl] = useState<string>('ws://127.0.0.1:4455');
@@ -311,100 +312,121 @@ function Dashboard() {
     : null;
 
   return (
-    <div style={{ padding: '20px', color: 'white', fontFamily: 'sans-serif', backgroundColor: '#1a1a1a', width: '100vw', height: '100vh', boxSizing: 'border-box', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', color: 'white', fontFamily: 'sans-serif', backgroundColor: '#0f0f13', width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
       
-      {/* Top Header & Profile Manager */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <h1 style={{ margin: 0 }}>Virtual Stream Deck</h1>
-        <div style={{ padding: '15px', backgroundColor: '#2a2a2a', borderRadius: '8px', border: '1px solid #444', display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Editing Profile:</label>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <select 
-                value={activeProfileId} 
-                onChange={(e) => handleSwitchProfile(e.target.value)}
-                style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
-              >
-                {Object.values(profiles).map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.id === equippedProfileId ? '(Equipped)' : ''}
-                  </option>
-                ))}
-              </select>
-              <button 
-                onClick={() => {
-                  const newName = window.prompt("Enter new profile name:", draftProfile.name);
-                  if (newName && newName.trim() !== '') {
-                    updateDraft({ ...draftProfile, name: newName.trim() });
-                  }
-                }}
-                style={{ padding: '6px 10px', cursor: 'pointer', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                title="Rename Profile"
-              >
-                ✏️
-              </button>
-            </div>
-          </div>
-          
-          <button onClick={handleCreateNewProfile} style={{ padding: '6px 12px', cursor: 'pointer' }}>+ New</button>
-          
-          <div style={{ width: '1px', height: '30px', backgroundColor: '#555' }} />
-          
-          <button 
-            onClick={handleSaveProfile} 
-            disabled={!hasUnsavedChanges}
-            style={{ 
-              padding: '6px 16px', 
-              cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
-              backgroundColor: hasUnsavedChanges ? '#2e7d32' : '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontWeight: 'bold'
-            }}
-          >
-            {hasUnsavedChanges ? "💾 Save Changes" : "Saved"}
-          </button>
-          
-          <button 
-            onClick={handleEquipProfile}
-            disabled={activeProfileId === equippedProfileId || hasUnsavedChanges}
-            style={{ 
-              padding: '6px 16px', 
-              cursor: (activeProfileId !== equippedProfileId && !hasUnsavedChanges) ? 'pointer' : 'not-allowed',
-              backgroundColor: (activeProfileId === equippedProfileId) ? '#1565c0' : '#444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontWeight: 'bold'
-            }}
-          >
-            {activeProfileId === equippedProfileId ? "Equipped" : "Equip Profile"}
-          </button>
-
-          <button 
-            onClick={handleDeleteProfile}
-            disabled={Object.keys(profiles).length <= 1}
-            style={{ 
-              padding: '6px 12px', 
-              cursor: Object.keys(profiles).length <= 1 ? 'not-allowed' : 'pointer',
-              backgroundColor: '#d32f2f',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontWeight: 'bold',
-              marginLeft: '10px'
-            }}
-          >
-            🗑️ Delete
-          </button>
-        </div>
+      {/* Left Sidebar */}
+      <div style={{ width: '260px', backgroundColor: 'rgba(20, 20, 25, 0.8)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', padding: '20px', flexShrink: 0 }}>
+        <h2 style={{ margin: '0 0 10px 0', fontSize: '1.4rem', color: '#fff', textAlign: 'center' }}>Virtual Stream Deck</h2>
+        <h3 style={{ margin: '0 0 40px 0', fontSize: '1.0rem', color: '#fff', textAlign: 'center', fontStyle: 'italic' }}>By MD Pastor</h3>
+        <button 
+          onClick={() => setCurrentTab('editor')}
+          style={{ padding: '12px 16px', backgroundColor: currentTab === 'editor' ? 'rgba(57, 108, 216, 0.2)' : 'transparent', color: currentTab === 'editor' ? '#74b9ff' : '#aaa', border: 'none', borderLeft: currentTab === 'editor' ? '3px solid #74b9ff' : '3px solid transparent', borderRadius: '0 8px 8px 0', textAlign: 'left', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', transition: 'all 0.2s' }}
+        >
+          🎨 Editor
+        </button>
+        <button 
+          onClick={() => setCurrentTab('settings')}
+          style={{ padding: '12px 16px', backgroundColor: currentTab === 'settings' ? 'rgba(57, 108, 216, 0.2)' : 'transparent', color: currentTab === 'settings' ? '#74b9ff' : '#aaa', border: 'none', borderLeft: currentTab === 'settings' ? '3px solid #74b9ff' : '3px solid transparent', borderRadius: '0 8px 8px 0', textAlign: 'left', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.2s' }}
+        >
+          ⚙️ Settings
+        </button>
       </div>
-      
-      <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+
+      {/* Main Content Area */}
+      <div style={{ flex: 1, padding: '30px', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto', boxSizing: 'border-box' }}>
         
-        {/* Left Column: Grid Editor Canvas */}
-        <div style={{ flex: 2, padding: '20px', backgroundColor: '#222', borderRadius: '12px', border: '1px solid #333' }}>
+        {currentTab === 'editor' && (
+          <>
+            {/* Top Profile Manager */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ padding: '15px', backgroundColor: 'rgba(40,40,45,0.6)', backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Editing Profile:</label>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <select 
+                      value={activeProfileId} 
+                      onChange={(e) => handleSwitchProfile(e.target.value)}
+                      style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      {Object.values(profiles).map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} {p.id === equippedProfileId ? '(Equipped)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button 
+                      onClick={() => {
+                        const newName = window.prompt("Enter new profile name:", draftProfile.name);
+                        if (newName && newName.trim() !== '') updateDraft({ ...draftProfile, name: newName.trim() });
+                      }}
+                      style={{ padding: '6px 10px', cursor: 'pointer', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      title="Rename Profile"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                </div>
+                
+                <button onClick={handleCreateNewProfile} style={{ padding: '6px 12px', cursor: 'pointer' }}>+ New</button>
+                
+                <div style={{ width: '1px', height: '30px', backgroundColor: '#555' }} />
+                
+                <button 
+                  onClick={handleSaveProfile} 
+                  disabled={!hasUnsavedChanges}
+                  style={{ 
+                    padding: '6px 16px', 
+                    cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
+                    backgroundColor: hasUnsavedChanges ? '#2e7d32' : '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {hasUnsavedChanges ? "💾 Save Changes" : "Saved"}
+                </button>
+                
+                <button 
+                  onClick={handleEquipProfile}
+                  disabled={activeProfileId === equippedProfileId || hasUnsavedChanges}
+                  style={{ 
+                    padding: '6px 16px', 
+                    cursor: (activeProfileId !== equippedProfileId && !hasUnsavedChanges) ? 'pointer' : 'not-allowed',
+                    backgroundColor: (activeProfileId === equippedProfileId) ? '#1565c0' : '#444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {activeProfileId === equippedProfileId ? "Equipped" : "Equip Profile"}
+                </button>
+
+                <button 
+                  onClick={handleDeleteProfile}
+                  disabled={Object.keys(profiles).length <= 1}
+                  style={{ 
+                    padding: '6px 12px', 
+                    cursor: Object.keys(profiles).length <= 1 ? 'not-allowed' : 'pointer',
+                    backgroundColor: '#d32f2f',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                    marginLeft: '10px'
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+            
+            {/* Editor Content Split */}
+            <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0 }}>
+              
+              {/* Left Column: Grid Layout Canvas */}
+              <div style={{ flex: 2, padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
             <h3 style={{ margin: 0 }}>Grid Layout</h3>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -499,96 +521,13 @@ function Dashboard() {
                 );
               })
             ))}
-          </div>
-        </div>
-
-        {/* Right Column: Settings & Editor */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          <div style={{ padding: '20px', backgroundColor: '#222', borderRadius: '12px', border: '1px solid #333' }}>
-            <h3 style={{ marginTop: 0 }}>Global Settings</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>OSD Toggle Hotkey:</label>
-                <HotkeyInput 
-                  value={draftProfile.osdHotkey || ''} 
-                  onChange={val => updateDraft({ ...draftProfile, osdHotkey: val })} 
-                />
-                <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Must be saved and equipped to take effect.</p>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input 
-                  type="checkbox" 
-                  id="requireOsdVisible"
-                  checked={!!draftProfile.requireOsdVisible}
-                  onChange={e => updateDraft({ ...draftProfile, requireOsdVisible: e.target.checked })}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <label htmlFor="requireOsdVisible" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>
-                  Require OSD to be visible for hotkeys to work
-                </label>
-              </div>
-
-              <div style={{ padding: '15px', backgroundColor: '#111', borderRadius: '8px', border: '1px solid #444', marginTop: '10px' }}>
-                <h4 style={{ margin: '0 0 10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  OBS Studio Connection
-                  <span style={{ 
-                    fontSize: '0.8rem', 
-                    padding: '2px 8px', 
-                    borderRadius: '10px', 
-                    backgroundColor: obsStatus === 'connected' ? '#2e7d32' : (obsStatus === 'connecting' ? '#f57c00' : '#d32f2f'),
-                    color: 'white'
-                  }}>
-                    {obsStatus.toUpperCase()}
-                  </span>
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <input 
-                    type="text" 
-                    placeholder="ws://127.0.0.1:4455"
-                    value={obsUrl} 
-                    onChange={e => setObsUrl(e.target.value)}
-                    style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#222', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                  />
-                  <input 
-                    type="password" 
-                    placeholder="OBS WebSocket Password (if any)"
-                    value={obsPassword} 
-                    onChange={e => setObsPassword(e.target.value)}
-                    style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#222', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                  />
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                      onClick={async () => {
-                        try {
-                          await obsService.saveSettings(obsUrl, obsPassword);
-                          await obsService.connect();
-                        } catch (err: any) {
-                          alert("OBS Connection Failed: " + (err.message || JSON.stringify(err) || String(err)));
-                        }
-                      }}
-                      disabled={obsStatus === 'connected'}
-                      style={{ flex: 1, padding: '8px', cursor: obsStatus === 'connected' ? 'not-allowed' : 'pointer', backgroundColor: '#1565c0', color: 'white', border: 'none', borderRadius: '4px' }}
-                    >
-                      Connect
-                    </button>
-                    <button 
-                      onClick={() => obsService.disconnect()}
-                      disabled={obsStatus === 'disconnected'}
-                      style={{ flex: 1, padding: '8px', cursor: obsStatus === 'disconnected' ? 'not-allowed' : 'pointer', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px' }}
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
 
-          <div style={{ padding: '20px', backgroundColor: '#222', borderRadius: '12px', border: '1px solid #333', flexGrow: 1 }}>
-            <h3 style={{ marginTop: 0 }}>Button Editor</h3>
+            {/* Right Column: Button Editor */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', flexGrow: 1, overflowY: 'auto' }}>
+                <h3 style={{ marginTop: 0 }}>Button Editor</h3>
             {selectedButtonData ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <p style={{ margin: 0, color: '#aaa' }}>Editing Button [{selectedButtonData.id}]</p>
@@ -862,7 +801,121 @@ function Dashboard() {
             )}
           </div>
 
-        </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {currentTab === 'settings' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
+            <h2 style={{ margin: '0 0 10px 0' }}>Global Settings</h2>
+            
+            <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '1rem', fontWeight: 'bold', marginBottom: '8px' }}>OSD Toggle Hotkey</label>
+                <HotkeyInput 
+                  value={draftProfile.osdHotkey || ''} 
+                  onChange={val => updateDraft({ ...draftProfile, osdHotkey: val })} 
+                />
+                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>Must be saved and equipped to take effect.</p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input 
+                  type="checkbox" 
+                  id="requireOsdVisible"
+                  checked={!!draftProfile.requireOsdVisible}
+                  onChange={e => updateDraft({ ...draftProfile, requireOsdVisible: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="requireOsdVisible" style={{ fontSize: '0.95rem', cursor: 'pointer' }}>
+                  Require Virtual Deck Overlay to be visible for hotkeys to work
+                </label>
+              </div>
+            </div>
+
+            <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <h3 style={{ margin: '0 0 15px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                OBS Studio Connection
+                <span style={{ 
+                  fontSize: '0.8rem', 
+                  padding: '4px 10px', 
+                  borderRadius: '12px', 
+                  backgroundColor: obsStatus === 'connected' ? 'rgba(46, 125, 50, 0.5)' : (obsStatus === 'connecting' ? 'rgba(245, 124, 0, 0.5)' : 'rgba(211, 47, 47, 0.5)'),
+                  border: `1px solid ${obsStatus === 'connected' ? '#4caf50' : (obsStatus === 'connecting' ? '#ff9800' : '#f44336')}`,
+                  color: 'white'
+                }}>
+                  {obsStatus.toUpperCase()}
+                </span>
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>WebSocket URL</label>
+                  <input 
+                    type="text" 
+                    placeholder="ws://127.0.0.1:4455"
+                    value={obsUrl} 
+                    onChange={e => setObsUrl(e.target.value)}
+                    style={{ width: '100%', padding: '10px', boxSizing: 'border-box', backgroundColor: 'rgba(15,15,20,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>Password</label>
+                  <input 
+                    type="password" 
+                    placeholder="OBS WebSocket Password (if any)"
+                    value={obsPassword} 
+                    onChange={e => setObsPassword(e.target.value)}
+                    style={{ width: '100%', padding: '10px', boxSizing: 'border-box', backgroundColor: 'rgba(15,15,20,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await obsService.saveSettings(obsUrl, obsPassword);
+                        await obsService.connect();
+                      } catch (err: any) {
+                        alert("OBS Connection Failed: " + (err.message || JSON.stringify(err) || String(err)));
+                      }
+                    }}
+                    disabled={obsStatus === 'connected'}
+                    style={{ flex: 1, padding: '10px', cursor: obsStatus === 'connected' ? 'not-allowed' : 'pointer', backgroundColor: obsStatus === 'connected' ? '#333' : '#396cd8', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'all 0.2s' }}
+                  >
+                    Connect
+                  </button>
+                  <button 
+                    onClick={() => obsService.disconnect()}
+                    disabled={obsStatus === 'disconnected'}
+                    style={{ flex: 1, padding: '10px', cursor: obsStatus === 'disconnected' ? 'not-allowed' : 'pointer', backgroundColor: obsStatus === 'disconnected' ? '#333' : '#d32f2f', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'all 0.2s' }}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+               <button 
+                  onClick={handleSaveProfile} 
+                  disabled={!hasUnsavedChanges}
+                  style={{ 
+                    padding: '10px 20px', 
+                    cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
+                    backgroundColor: hasUnsavedChanges ? '#4caf50' : '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {hasUnsavedChanges ? "💾 Save All Changes" : "Everything is Saved"}
+                </button>
+            </div>
+          </div>
+        )}
+
       </div>
       
       <IconPicker 
