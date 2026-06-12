@@ -155,6 +155,14 @@ function Dashboard() {
     }
   };
 
+  const handleDiscardChanges = () => {
+    if (window.confirm("Are you sure you want to discard all unsaved changes?")) {
+      setDraftProfile(profiles[activeProfileId] || DEFAULT_PROFILE);
+      setHasUnsavedChanges(false);
+      setSelectedButtonId(null);
+    }
+  };
+
   const handleEquipProfile = async () => {
     if (hasUnsavedChanges) {
       alert("Please save your changes before equipping this profile!");
@@ -388,6 +396,24 @@ function Dashboard() {
                 >
                   {hasUnsavedChanges ? "💾 Save Changes" : "Saved"}
                 </button>
+
+                {hasUnsavedChanges && (
+                  <button 
+                    onClick={handleDiscardChanges}
+                    style={{ 
+                      padding: '6px 16px', 
+                      cursor: 'pointer',
+                      backgroundColor: '#555',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      marginLeft: '10px'
+                    }}
+                  >
+                    Discard
+                  </button>
+                )}
                 
                 <button 
                   onClick={handleEquipProfile}
@@ -905,7 +931,24 @@ function Dashboard() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', gap: '15px' }}>
+               {hasUnsavedChanges && (
+                 <button 
+                   onClick={handleDiscardChanges} 
+                   style={{ 
+                     padding: '10px 20px', 
+                     cursor: 'pointer',
+                     backgroundColor: '#444',
+                     color: 'white',
+                     border: 'none',
+                     borderRadius: '8px',
+                     fontWeight: 'bold',
+                     transition: 'all 0.2s'
+                   }}
+                 >
+                   Discard Changes
+                 </button>
+               )}
                <button 
                   onClick={handleSaveProfile} 
                   disabled={!hasUnsavedChanges}
