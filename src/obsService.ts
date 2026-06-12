@@ -5,14 +5,91 @@ export const obs = new OBSWebSocket();
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
+export interface ObsState {
+  isRecording: boolean;
+  isStreaming: boolean;
+  isVirtualCamOn: boolean;
+  currentScene: string;
+  mutedInputs: Record<string, boolean>;
+}
+
 class OBSService {
   private status: ConnectionStatus = 'disconnected';
   private statusListeners: Array<(status: ConnectionStatus) => void> = [];
 
+  private obsState: ObsState = {
+    isRecording: false,
+    isStreaming: false,
+    isVirtualCamOn: false,
+    currentScene: '',
+    mutedInputs: {}
+  };
+  private obsStateListeners: Array<(state: ObsState) => void> = [];
+
   constructor() {
-    obs.on('ConnectionOpened', () => this.setStatus('connected'));
+    obs.on('ConnectionOpened', () => {
+      this.setStatus('connected');
+      this.fetchInitialState();
+    });
     obs.on('ConnectionClosed', () => this.setStatus('disconnected'));
     obs.on('ConnectionError', () => this.setStatus('disconnected'));
+
+    obs.on('RecordStateChanged', (data: any) => this.updateObsState({ isRecording: data.outputActive }));
+    obs.on('StreamStateChanged', (data: any) => this.updateObsState({ isStreaming: data.outputActive }));
+    obs.on('VirtualcamStateChanged', (data: any) => this.updateObsState({ isVirtualCamOn: data.outputActive }));
+    obs.on('CurrentProgramSceneChanged', (data: any) => this.updateObsState({ currentScene: data.sceneName }));
+    obs.on('InputMuteStateChanged', (data: any) => {
+      this.updateObsState({
+        mutedInputs: { ...this.obsState.mutedInputs, [data.inputName]: data.inputMuted }
+      });
+    });
+  }
+
+  public getObsState() { return this.obsState; }
+  public onObsStateChange(listener: (state: ObsState) => void) {
+    this.obsStateListeners.push(listener);
+    return () => { this.obsStateListeners = this.obsStateListeners.filter(l => l !== listener); };
+  }
+  private updateObsState(partial: Partial<ObsState>) {
+    this.obsState = { ...this.obsState, ...partial };
+    this.obsStateListeners.forEach(l => l(this.obsState));
+  }
+
+  private async fetchInitialState() {
+    if (this.status !== 'connected') return;
+    try {
+      const [
+        recordStatus, 
+        streamStatus, 
+        vcamStatus, 
+        { currentProgramSceneName }, 
+        { inputs }
+      ] = await Promise.all([
+        obs.call('GetRecordStatus'),
+        obs.call('GetStreamStatus'),
+        obs.call('GetVirtualCamStatus'),
+        obs.call('GetCurrentProgramScene'),
+        obs.call('GetInputList')
+      ]);
+
+      const mutedInputs: Record<string, boolean> = {};
+      for (const input of inputs) {
+        try {
+          const { inputMuted } = await obs.call('GetInputMute', { inputName: input.inputName as string });
+          mutedInputs[input.inputName as string] = inputMuted;
+        } catch(e) {}
+      }
+
+      this.updateObsState({
+        isRecording: !!recordStatus.outputActive,
+        isStreaming: !!streamStatus.outputActive,
+        isVirtualCamOn: !!vcamStatus.outputActive,
+        currentScene: currentProgramSceneName,
+        mutedInputs
+      });
+    } catch (e) {
+      console.error("Failed to fetch initial OBS state", e);
+    }
   }
 
   private setStatus(newStatus: ConnectionStatus) {

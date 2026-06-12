@@ -76,3 +76,12 @@ html, body, #root {
   transform: scale(0.95);
   background: rgba(57, 108, 216, 0.4);
 }
+
+.deck-button.state-active {
+  border-color: #f44336;
+  box-shadow: 0 0 15px rgba(244, 67, 54, 0.4);
+}
+.deck-button.state-active span {
+  color: #ffcdd2 !important;
+  font-weight: bold;
+}

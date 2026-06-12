@@ -5,7 +5,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
-import { obsService, ConnectionStatus } from './obsService';
+import { obsService, ConnectionStatus, ObsState } from './obsService';
 
 function Dashboard() {
   // Profile Management State
@@ -19,7 +19,8 @@ function Dashboard() {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
-  const [obsStatus, setObsStatus] = useState<ConnectionStatus>('disconnected');
+  const [obsStatus, setObsStatus] = useState<ConnectionStatus>(obsService.getStatus());
+  const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
   const [obsUrl, setObsUrl] = useState<string>('ws://127.0.0.1:4455');
   const [obsPassword, setObsPassword] = useState<string>('');
   
@@ -42,9 +43,12 @@ function Dashboard() {
       setHasUnsavedChanges(false);
     });
 
-    setObsStatus(obsService.getStatus());
-    const unsubObs = obsService.onStatusChange(setObsStatus);
-    return () => unsubObs();
+    const unlistenStatus = obsService.onStatusChange(setObsStatus);
+    const unlistenObsState = obsService.onObsStateChange(setObsState);
+    return () => {
+        unlistenStatus();
+        unlistenObsState();
+    };
   }, []);
 
   // The active hotkey is the one saved in the CURRENTLY EQUIPPED profile
@@ -429,6 +433,18 @@ function Dashboard() {
                 const isSelected = selectedButtonId === id;
                 const isBeingDragged = dragSourceId === id;
                 const isDropTarget = dragOverId === id && dragSourceId !== id;
+                
+                let isStateActive = false;
+                if (btnData?.action) {
+                  switch (btnData.action.type) {
+                    case 'obs_toggle_record': isStateActive = obsState.isRecording; break;
+                    case 'obs_toggle_stream': isStateActive = obsState.isStreaming; break;
+                    case 'obs_toggle_virtual_cam': isStateActive = obsState.isVirtualCamOn; break;
+                    case 'obs_switch_scene': isStateActive = obsState.currentScene === btnData.action.payload; break;
+                    case 'obs_toggle_mute': isStateActive = obsState.mutedInputs[btnData.action.payload || ''] === true; break;
+                  }
+                }
+
                 return (
                   <div 
                     key={id}
@@ -439,7 +455,8 @@ function Dashboard() {
                       aspectRatio: '1 / 1',
                       backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
                       color: 'white',
-                      border: isSelected ? '2px solid #396cd8' : (isDropTarget ? '2px dashed #4caf50' : '1px solid rgba(255,255,255,0.1)'),
+                      border: isSelected ? '2px solid #396cd8' : (isStateActive ? '2px solid #f44336' : (isDropTarget ? '2px dashed #4caf50' : '1px solid rgba(255,255,255,0.1)')),
+                      boxShadow: isStateActive && !isSelected ? '0 0 15px rgba(244, 67, 54, 0.4)' : 'none',
                       opacity: isBeingDragged ? 0.4 : 1,
                       transform: isDropTarget ? 'scale(1.05)' : 'scale(1)',
                       transition: 'transform 0.1s ease, opacity 0.1s ease',

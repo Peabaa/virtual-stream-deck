@@ -6,12 +6,13 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { invoke } from '@tauri-apps/api/core';
 import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import { CURATED_ICONS, IconName } from './IconPicker';
-import { obsService } from './obsService';
+import { obsService, ObsState } from './obsService';
 import './App.css';
 
 function Osd() {
   const [profile, setProfile] = useState<DeckProfile>(DEFAULT_PROFILE);
   const [activeButtonId, setActiveButtonId] = useState<string | null>(null);
+  const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
   const registeredHotkeysRef = useRef<string[]>([]);
 
   const fetchProfile = async () => {
@@ -121,6 +122,8 @@ function Osd() {
     fetchProfile();
     obsService.connect().catch(e => console.error("OBS Connection failed on mount", e));
     
+    const unlistenObs = obsService.onObsStateChange(setObsState);
+
     // Listen for updates from the Dashboard
     const unlisten = listen('profile_updated', () => {
       fetchProfile();
@@ -145,12 +148,25 @@ function Osd() {
       unlistenPause.then(f => f());
       unlistenResume.then(f => f());
       window.removeEventListener('focus', handleFocus);
+      unlistenObs();
       // Clean up global shortcuts when OSD unmounts
       registeredHotkeysRef.current.forEach(hk => {
         if(hk) unregister(hk).catch(()=>{});
       });
     };
   }, []);
+
+  const isActiveState = (btnData: any) => {
+    if (!btnData?.action) return false;
+    switch (btnData.action.type) {
+      case 'obs_toggle_record': return obsState.isRecording;
+      case 'obs_toggle_stream': return obsState.isStreaming;
+      case 'obs_toggle_virtual_cam': return obsState.isVirtualCamOn;
+      case 'obs_switch_scene': return obsState.currentScene === btnData.action.payload;
+      case 'obs_toggle_mute': return obsState.mutedInputs[btnData.action.payload || ''] === true;
+      default: return false;
+    }
+  };
 
   return (
     <main data-tauri-drag-region className="deck-container">
@@ -219,11 +235,13 @@ function Osd() {
               }
             };
 
+            const isStateActive = isActiveState(btnData);
+
             return (
               <button 
                 key={id} 
                 onClick={handleAction}
-                className={`deck-button ${activeButtonId === id ? 'active-simulated' : ''}`}
+                className={`deck-button ${activeButtonId === id ? 'active-simulated' : ''} ${isStateActive ? 'state-active' : ''}`}
                 style={{
                   backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
                   display: 'flex',
