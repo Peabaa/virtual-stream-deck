@@ -41,8 +41,8 @@ export default function HotkeyInput({ value, onChange }: HotkeyInputProps) {
 
     let mainKey = e.key.toUpperCase();
     
-    // Ignore standalone modifiers
-    if (['CONTROL', 'SHIFT', 'ALT', 'META'].includes(mainKey)) {
+    // Ignore standalone modifiers and lock keys
+    if (['CONTROL', 'SHIFT', 'ALT', 'META', 'CAPSLOCK', 'NUMLOCK', 'SCROLLLOCK'].includes(mainKey)) {
       return;
     }
 

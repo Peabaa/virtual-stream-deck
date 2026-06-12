@@ -6,6 +6,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { invoke } from '@tauri-apps/api/core';
 import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import { CURATED_ICONS, IconName } from './IconPicker';
+import { obsService } from './obsService';
 import './App.css';
 
 function Osd() {
@@ -19,6 +20,11 @@ function Osd() {
     const p = profilesList[eqId] || DEFAULT_PROFILE;
     setProfile(p);
     setupHotkeys(p);
+    
+    // Also ensure OBS is connected with the latest settings
+    if (obsService.getStatus() !== 'connected') {
+      obsService.connect().catch(e => console.error("OBS Connection failed", e));
+    }
   };
 
   const setupHotkeys = async (p: DeckProfile) => {
@@ -38,8 +44,16 @@ function Osd() {
           const registered = await isRegistered(btn.triggerHotkey);
           if (registered) await unregister(btn.triggerHotkey).catch(()=>{});
           
+          let isHeld = false;
           await register(btn.triggerHotkey, async (event) => {
-            if (event.state !== "Pressed") return;
+            if (event.state === "Released") {
+              isHeld = false;
+              return;
+            }
+            if (event.state === "Pressed") {
+              if (isHeld) return; // Prevent OS auto-repeat from triggering multiple times
+              isHeld = true;
+            }
 
             // Trigger visual glow
             setActiveButtonId(id);
@@ -78,6 +92,20 @@ function Osd() {
               } catch (e) {
                 console.error("Failed to run macro via hotkey:", e);
               }
+            } else if (btn.action?.type === 'obs_switch_scene' && btn.action.payload) {
+              await obsService.switchScene(btn.action.payload);
+            } else if (btn.action?.type === 'obs_toggle_source' && btn.action.payload) {
+              await obsService.toggleSource(undefined, btn.action.payload);
+            } else if (btn.action?.type === 'obs_toggle_mute' && btn.action.payload) {
+              await obsService.toggleMute(btn.action.payload);
+            } else if (btn.action?.type === 'obs_toggle_stream') {
+              await obsService.toggleStream();
+            } else if (btn.action?.type === 'obs_toggle_record') {
+              await obsService.toggleRecord();
+            } else if (btn.action?.type === 'obs_toggle_virtual_cam') {
+              await obsService.toggleVirtualCam();
+            } else if (btn.action?.type === 'obs_take_screenshot' && btn.action.payload) {
+              await obsService.takeScreenshot(btn.action.payload);
             }
           });
           newHotkeys.push(btn.triggerHotkey);
@@ -91,6 +119,7 @@ function Osd() {
 
   useEffect(() => {
     fetchProfile();
+    obsService.connect().catch(e => console.error("OBS Connection failed on mount", e));
     
     // Listen for updates from the Dashboard
     const unlisten = listen('profile_updated', () => {
@@ -173,6 +202,20 @@ function Osd() {
                 } catch (e) {
                   console.error("Failed to run macro:", e);
                 }
+              } else if (btnData?.action?.type === 'obs_switch_scene' && btnData.action.payload) {
+                await obsService.switchScene(btnData.action.payload);
+              } else if (btnData?.action?.type === 'obs_toggle_source' && btnData.action.payload) {
+                await obsService.toggleSource(undefined, btnData.action.payload);
+              } else if (btnData?.action?.type === 'obs_toggle_mute' && btnData.action.payload) {
+                await obsService.toggleMute(btnData.action.payload);
+              } else if (btnData?.action?.type === 'obs_toggle_stream') {
+                await obsService.toggleStream();
+              } else if (btnData?.action?.type === 'obs_toggle_record') {
+                await obsService.toggleRecord();
+              } else if (btnData?.action?.type === 'obs_toggle_virtual_cam') {
+                await obsService.toggleVirtualCam();
+              } else if (btnData?.action?.type === 'obs_take_screenshot' && btnData.action.payload) {
+                await obsService.takeScreenshot(btnData.action.payload);
               }
             };
 

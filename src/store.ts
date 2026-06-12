@@ -1,6 +1,18 @@
 import { load, Store } from '@tauri-apps/plugin-store';
 
-export type ActionType = 'none' | 'open_url' | 'open_folder' | 'type_text' | 'run_macro';
+export type ActionType = 
+  | 'none' 
+  | 'open_url' 
+  | 'open_folder' 
+  | 'type_text' 
+  | 'run_macro'
+  | 'obs_switch_scene'
+  | 'obs_toggle_source'
+  | 'obs_toggle_mute'
+  | 'obs_toggle_stream'
+  | 'obs_toggle_record'
+  | 'obs_toggle_virtual_cam'
+  | 'obs_take_screenshot';
 
 export interface DeckButtonAction {
   type: ActionType;
@@ -40,7 +52,7 @@ let storeInstance: Store | null = null;
 
 export async function getStore(): Promise<Store> {
   if (!storeInstance) {
-    storeInstance = await load('profiles.json', { autoSave: false });
+    storeInstance = await load('profiles.json', { autoSave: false, defaults: {} });
   }
   return storeInstance;
 }

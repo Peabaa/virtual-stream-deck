@@ -5,6 +5,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
+import { obsService, ConnectionStatus } from './obsService';
 
 function Dashboard() {
   // Profile Management State
@@ -18,21 +19,32 @@ function Dashboard() {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
+  const [obsStatus, setObsStatus] = useState<ConnectionStatus>('disconnected');
+  const [obsUrl, setObsUrl] = useState<string>('ws://127.0.0.1:4455');
+  const [obsPassword, setObsPassword] = useState<string>('');
+  
   const dragSourceRef = useRef<string | null>(null);
   const isDraggingRef = useRef<boolean>(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Load initial profiles on mount
   useEffect(() => {
-    Promise.all([loadProfiles(), loadEquippedProfileId()]).then(([loadedProfiles, eqId]) => {
+    Promise.all([loadProfiles(), loadEquippedProfileId(), obsService.loadSettings()]).then(([loadedProfiles, eqId, obsSettings]) => {
       setProfiles(loadedProfiles);
       setEquippedProfileId(eqId);
+      
+      if (obsSettings.url) setObsUrl(obsSettings.url);
+      if (obsSettings.password) setObsPassword(obsSettings.password);
       
       const activeId = loadedProfiles[eqId] ? eqId : Object.keys(loadedProfiles)[0];
       setActiveProfileId(activeId);
       setDraftProfile(loadedProfiles[activeId] || DEFAULT_PROFILE);
       setHasUnsavedChanges(false);
     });
+
+    setObsStatus(obsService.getStatus());
+    const unsubObs = obsService.onStatusChange(setObsStatus);
+    return () => unsubObs();
   }, []);
 
   // The active hotkey is the one saved in the CURRENTLY EQUIPPED profile
@@ -500,6 +512,61 @@ function Dashboard() {
                   Require OSD to be visible for hotkeys to work
                 </label>
               </div>
+
+              <div style={{ padding: '15px', backgroundColor: '#111', borderRadius: '8px', border: '1px solid #444', marginTop: '10px' }}>
+                <h4 style={{ margin: '0 0 10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  OBS Studio Connection
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    padding: '2px 8px', 
+                    borderRadius: '10px', 
+                    backgroundColor: obsStatus === 'connected' ? '#2e7d32' : (obsStatus === 'connecting' ? '#f57c00' : '#d32f2f'),
+                    color: 'white'
+                  }}>
+                    {obsStatus.toUpperCase()}
+                  </span>
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="ws://127.0.0.1:4455"
+                    value={obsUrl} 
+                    onChange={e => setObsUrl(e.target.value)}
+                    style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#222', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                  />
+                  <input 
+                    type="password" 
+                    placeholder="OBS WebSocket Password (if any)"
+                    value={obsPassword} 
+                    onChange={e => setObsPassword(e.target.value)}
+                    style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#222', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await obsService.saveSettings(obsUrl, obsPassword);
+                          await obsService.connect();
+                        } catch (err: any) {
+                          alert("OBS Connection Failed: " + (err.message || JSON.stringify(err) || String(err)));
+                        }
+                      }}
+                      disabled={obsStatus === 'connected'}
+                      style={{ flex: 1, padding: '8px', cursor: obsStatus === 'connected' ? 'not-allowed' : 'pointer', backgroundColor: '#1565c0', color: 'white', border: 'none', borderRadius: '4px' }}
+                    >
+                      Connect
+                    </button>
+                    <button 
+                      onClick={() => obsService.disconnect()}
+                      disabled={obsStatus === 'disconnected'}
+                      style={{ flex: 1, padding: '8px', cursor: obsStatus === 'disconnected' ? 'not-allowed' : 'pointer', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px' }}
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -620,6 +687,14 @@ function Dashboard() {
                       <option value="open_folder">Open Folder / Profile</option>
                       <option value="type_text">Type Text</option>
                       <option value="run_macro">Run Macro/Shortcut</option>
+                      <option disabled>──────────</option>
+                      <option value="obs_switch_scene">OBS: Switch Scene</option>
+                      <option value="obs_toggle_source">OBS: Toggle Source Visibility</option>
+                      <option value="obs_toggle_mute">OBS: Toggle Audio Mute</option>
+                      <option value="obs_toggle_stream">OBS: Toggle Stream</option>
+                      <option value="obs_toggle_record">OBS: Toggle Record</option>
+                      <option value="obs_toggle_virtual_cam">OBS: Toggle Virtual Cam</option>
+                      <option value="obs_take_screenshot">OBS: Take Screenshot</option>
                     </select>
                   </div>
 
@@ -686,6 +761,70 @@ function Dashboard() {
                         style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
                       />
                       <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Wrap modifiers in brackets. Examples: {'{+CTRL}c{-CTRL}'} or {'{ENTER}'}. Do not use for plain text.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'obs_switch_scene' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Scene Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="Gameplay"
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'obs_switch_scene', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Scene to switch to.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'obs_toggle_source' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Source Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="Webcam"
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'obs_toggle_source', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Source to toggle in the current scene.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'obs_toggle_mute' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Audio Source Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="Mic/Aux"
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'obs_toggle_mute', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Audio source to toggle mute.</p>
+                    </div>
+                  )}
+
+                  {selectedButtonData.action?.type === 'obs_take_screenshot' && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Save Folder Path</label>
+                      <input 
+                        type="text" 
+                        placeholder="C:\Users\Name\Pictures"
+                        value={selectedButtonData.action?.payload || ''} 
+                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
+                          action: { type: 'obs_take_screenshot', payload: e.target.value } 
+                        })}
+                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                      />
+                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The absolute path to the folder where the screenshot of the Current Program Scene will be saved.</p>
                     </div>
                   )}
                 </div>
