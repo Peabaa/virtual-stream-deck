@@ -81,6 +81,39 @@ html, body, #root {
   background: rgba(57, 108, 216, 0.4);
 }
 
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); border-color: rgba(211, 47, 47, 1); }
+  70% { box-shadow: 0 0 15px 10px rgba(211, 47, 47, 0); border-color: rgba(211, 47, 47, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); border-color: rgba(211, 47, 47, 1); }
+}
+
+@keyframes pulse-blue {
+  0% { box-shadow: 0 0 0 0 rgba(57, 108, 216, 0.7); border-color: rgba(57, 108, 216, 1); }
+  70% { box-shadow: 0 0 15px 10px rgba(57, 108, 216, 0); border-color: rgba(57, 108, 216, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(57, 108, 216, 0); border-color: rgba(57, 108, 216, 1); }
+}
+
+@keyframes pulse-yellow {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); border-color: rgba(245, 158, 11, 1); }
+  70% { box-shadow: 0 0 15px 10px rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 1); }
+}
+
+.state-pulse-red {
+  animation: pulse-red 2s infinite;
+  background-color: rgba(211, 47, 47, 0.2) !important;
+}
+
+.state-pulse-blue {
+  animation: pulse-blue 2s infinite;
+  background-color: rgba(57, 108, 216, 0.2) !important;
+}
+
+.state-pulse-yellow {
+  animation: pulse-yellow 2s infinite;
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
+
 .deck-button.state-active {
   border-color: #f44336;
   box-shadow: 0 0 15px rgba(244, 67, 54, 0.4);

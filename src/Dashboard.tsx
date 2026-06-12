@@ -484,14 +484,14 @@ function Dashboard() {
                 const isBeingDragged = dragSourceId === id;
                 const isDropTarget = dragOverId === id && dragSourceId !== id;
                 
-                let isStateActive = false;
+                let stateCssClass = '';
                 if (btnData?.action) {
                   switch (btnData.action.type) {
-                    case 'obs_toggle_record': isStateActive = obsState.isRecording; break;
-                    case 'obs_toggle_stream': isStateActive = obsState.isStreaming; break;
-                    case 'obs_toggle_virtual_cam': isStateActive = obsState.isVirtualCamOn; break;
-                    case 'obs_switch_scene': isStateActive = obsState.currentScene === btnData.action.payload; break;
-                    case 'obs_toggle_mute': isStateActive = obsState.mutedInputs[btnData.action.payload || ''] === true; break;
+                    case 'obs_toggle_record': stateCssClass = obsState.isRecording ? 'state-pulse-red' : ''; break;
+                    case 'obs_toggle_stream': stateCssClass = obsState.isStreaming ? 'state-pulse-red' : ''; break;
+                    case 'obs_toggle_virtual_cam': stateCssClass = obsState.isVirtualCamOn ? 'state-pulse-blue' : ''; break;
+                    case 'obs_switch_scene': stateCssClass = obsState.currentScene === btnData.action.payload ? 'state-pulse-blue' : ''; break;
+                    case 'obs_toggle_mute': stateCssClass = obsState.mutedInputs[btnData.action.payload || ''] === true ? 'state-pulse-yellow' : ''; break;
                   }
                 }
 
@@ -501,12 +501,13 @@ function Dashboard() {
                     data-cell-id={id}
                     onClick={() => { if (!isDraggingRef.current) setSelectedButtonId(id); }}
                     onMouseDown={(e) => handleMouseDown(e, id)}
+                    className={stateCssClass}
                     style={{
                       aspectRatio: '1 / 1',
                       backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
                       color: 'white',
-                      border: isSelected ? '2px solid #396cd8' : (isStateActive ? '2px solid #f44336' : (isDropTarget ? '2px dashed #4caf50' : '1px solid rgba(255,255,255,0.1)')),
-                      boxShadow: isStateActive && !isSelected ? '0 0 15px rgba(244, 67, 54, 0.4)' : 'none',
+                      border: isSelected ? '2px solid #396cd8' : (isDropTarget ? '2px dashed #4caf50' : '1px solid rgba(255,255,255,0.1)'),
+                      boxShadow: 'none',
                       opacity: isBeingDragged ? 0.4 : 1,
                       transform: isDropTarget ? 'scale(1.05)' : 'scale(1)',
                       transition: 'transform 0.1s ease, opacity 0.1s ease',

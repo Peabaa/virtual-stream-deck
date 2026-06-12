@@ -156,15 +156,15 @@ function Osd() {
     };
   }, []);
 
-  const isActiveState = (btnData: any) => {
-    if (!btnData?.action) return false;
+  const getStateCssClass = (btnData: any) => {
+    if (!btnData?.action) return '';
     switch (btnData.action.type) {
-      case 'obs_toggle_record': return obsState.isRecording;
-      case 'obs_toggle_stream': return obsState.isStreaming;
-      case 'obs_toggle_virtual_cam': return obsState.isVirtualCamOn;
-      case 'obs_switch_scene': return obsState.currentScene === btnData.action.payload;
-      case 'obs_toggle_mute': return obsState.mutedInputs[btnData.action.payload || ''] === true;
-      default: return false;
+      case 'obs_toggle_record': return obsState.isRecording ? 'state-pulse-red' : '';
+      case 'obs_toggle_stream': return obsState.isStreaming ? 'state-pulse-red' : '';
+      case 'obs_toggle_virtual_cam': return obsState.isVirtualCamOn ? 'state-pulse-blue' : '';
+      case 'obs_switch_scene': return obsState.currentScene === btnData.action.payload ? 'state-pulse-blue' : '';
+      case 'obs_toggle_mute': return obsState.mutedInputs[btnData.action.payload || ''] === true ? 'state-pulse-yellow' : '';
+      default: return '';
     }
   };
 
@@ -235,13 +235,13 @@ function Osd() {
               }
             };
 
-            const isStateActive = isActiveState(btnData);
+            const stateCssClass = getStateCssClass(btnData);
 
             return (
               <button 
                 key={id} 
                 onClick={handleAction}
-                className={`deck-button ${activeButtonId === id ? 'active-simulated' : ''} ${isStateActive ? 'state-active' : ''}`}
+                className={`deck-button ${activeButtonId === id ? 'active-simulated' : ''} ${stateCssClass}`}
                 style={{
                   backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
                   display: 'flex',
