@@ -119,6 +119,8 @@ function Osd() {
               await invoke('trigger_sys_key', { keyCode: 177 });
             } else if (btn.action?.type === 'sys_media_play_pause') {
               await invoke('trigger_sys_key', { keyCode: 179 });
+            } else if (btn.action?.type === 'sys_send_keypress' && btn.action.payload) {
+              await invoke('trigger_sys_key', { keyCode: parseInt(btn.action.payload, 10) });
             }
           });
           newHotkeys.push(btn.triggerHotkey);
@@ -256,6 +258,8 @@ function Osd() {
                 await invoke('trigger_sys_key', { keyCode: 177 });
               } else if (btnData?.action?.type === 'sys_media_play_pause') {
                 await invoke('trigger_sys_key', { keyCode: 179 });
+              } else if (btnData?.action?.type === 'sys_send_keypress' && btnData.action.payload) {
+                await invoke('trigger_sys_key', { keyCode: parseInt(btnData.action.payload, 10) });
               }
             };
 

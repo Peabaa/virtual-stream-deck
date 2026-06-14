@@ -27,6 +27,7 @@ const ACTION_CATEGORIES: ActionCategory[] = [
       { type: 'open_folder', label: 'Switch Profile', description: 'Instantly swap your deck layout.', icon: FolderOpen },
       { type: 'type_text', label: 'Type Text', description: 'Automatically type a paragraph.', icon: Keyboard },
       { type: 'run_macro', label: 'Run Macro', description: 'Execute a keyboard shortcut sequence.', icon: Zap },
+      { type: 'sys_send_keypress', label: 'Simulate Key', description: 'Send a physical keypress to the OS.', icon: Keyboard },
     ]
   },
   {

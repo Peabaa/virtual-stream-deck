@@ -18,7 +18,8 @@ export type ActionType =
   | 'sys_volume_mute'
   | 'sys_media_play_pause'
   | 'sys_media_next'
-  | 'sys_media_prev';
+  | 'sys_media_prev'
+  | 'sys_send_keypress';
 
 export interface DeckButtonAction {
   type: ActionType;

@@ -13,9 +13,45 @@ fn type_text(text: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(windows)]
 #[tauri::command]
 fn trigger_sys_key(key_code: u16) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    use winapi::um::winuser::{SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, MapVirtualKeyW, MAPVK_VK_TO_VSC};
+    use std::mem::{size_of, zeroed};
+
+    unsafe {
+        let scan_code = MapVirtualKeyW(key_code as u32, MAPVK_VK_TO_VSC) as u16;
+
+        let mut input_down: INPUT = zeroed();
+        input_down.type_ = INPUT_KEYBOARD;
+        *input_down.u.ki_mut() = KEYBDINPUT {
+            wVk: key_code,
+            wScan: scan_code,
+            dwFlags: KEYEVENTF_SCANCODE,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+
+        let mut input_up: INPUT = zeroed();
+        input_up.type_ = INPUT_KEYBOARD;
+        *input_up.u.ki_mut() = KEYBDINPUT {
+            wVk: key_code,
+            wScan: scan_code,
+            dwFlags: KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+
+        let mut inputs = [input_down, input_up];
+        SendInput(2, inputs.as_mut_ptr(), size_of::<INPUT>() as i32);
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn trigger_sys_key(key_code: u16) -> Result<(), String> {
+    let mut enigo = enigo::Enigo::new();
     enigo.key_click(enigo::Key::Raw(key_code));
     Ok(())
 }
