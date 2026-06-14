@@ -146,9 +146,46 @@ fn trigger_sys_combo(modifiers: Vec<u16>, key_code: u16) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            // Setup Tray Icon
+            use tauri::Manager;
+            let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show_i = tauri::menu::MenuItem::with_id(app, "show", "Open Dashboard", true, None::<&str>)?;
+            let menu = tauri::menu::Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            let _tray = tauri::tray::TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit" => {
+                        std::process::exit(0);
+                    }
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("dashboard") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| match event {
+                    tauri::tray::TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Up,
+                        ..
+                    } => {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("dashboard") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    _ => {}
+                })
+                .build(app)?;
+
             #[cfg(windows)]
             {
-                use tauri::{Manager, Emitter};
+                use tauri::Emitter;
                 let app_handle = app.handle().clone();
                 std::thread::spawn(move || {
                     use winapi::um::winuser::{GetForegroundWindow, GetWindowThreadProcessId};
@@ -195,10 +232,20 @@ pub fn run() {
             }
             Ok(())
         })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                if window.label() == "dashboard" {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
+            }
+            _ => {}
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
         .invoke_handler(tauri::generate_handler![greet, type_text, run_macro, trigger_sys_key, trigger_sys_combo])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

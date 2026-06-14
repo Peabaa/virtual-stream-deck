@@ -3,6 +3,7 @@ import HotkeyInput from './HotkeyInput';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
+import { enable, disable, isEnabled as isAutostartEnabled } from '@tauri-apps/plugin-autostart';
 import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, saveBaseProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
 import { ActionPicker, ACTION_DEFS } from './ActionPicker';
@@ -82,6 +83,7 @@ function Dashboard() {
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
   const [obsUrl, setObsUrl] = useState<string>('ws://127.0.0.1:4455');
   const [obsPassword, setObsPassword] = useState<string>('');
+  const [runOnStartup, setRunOnStartup] = useState<boolean>(false);
   const [isDetectingApp, setIsDetectingApp] = useState<boolean>(false);
   const isDetectingAppRef = useRef<boolean>(false);
   const draftProfileRef = useRef<DeckProfile>(draftProfile);
@@ -113,6 +115,9 @@ function Dashboard() {
       setActiveProfileId(activeId);
       setDraftProfile(loadedProfiles[activeId] || DEFAULT_PROFILE);
       setHasUnsavedChanges(false);
+      
+      const startupStatus = await isAutostartEnabled();
+      setRunOnStartup(startupStatus);
     };
     fetchData();
 
@@ -1049,6 +1054,30 @@ function Dashboard() {
                 />
                 <label htmlFor="requireOsdVisible" style={{ fontSize: '0.95rem', cursor: 'pointer' }}>
                   Require Virtual Deck Overlay to be visible for hotkeys to work
+                </label>
+              </div>
+            </div>
+
+            <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 15px 0' }}>System Preferences</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input 
+                  type="checkbox" 
+                  id="runOnStartup"
+                  checked={runOnStartup}
+                  onChange={async (e) => {
+                    const checked = e.target.checked;
+                    setRunOnStartup(checked);
+                    if (checked) {
+                      await enable();
+                    } else {
+                      await disable();
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="runOnStartup" style={{ fontSize: '0.95rem', cursor: 'pointer' }}>
+                  Run on System Startup (Background)
                 </label>
               </div>
             </div>

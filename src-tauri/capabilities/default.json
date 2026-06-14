@@ -16,6 +16,7 @@
     "core:window:allow-is-visible",
     "store:default",
     "core:event:default",
-    "shell:default"
+    "shell:default",
+    "autostart:default"
   ]
 }
