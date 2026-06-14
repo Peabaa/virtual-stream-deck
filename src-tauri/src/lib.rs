@@ -14,6 +14,13 @@ fn type_text(text: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn trigger_sys_key(key_code: u16) -> Result<(), String> {
+    let mut enigo = Enigo::new();
+    enigo.key_click(enigo::Key::Raw(key_code));
+    Ok(())
+}
+
+#[tauri::command]
 fn run_macro(sequence: &str) -> Result<(), String> {
     let mut enigo = Enigo::new();
     enigo.key_sequence_parse(sequence);
@@ -27,7 +34,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, type_text, run_macro])
+        .invoke_handler(tauri::generate_handler![greet, type_text, run_macro, trigger_sys_key])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

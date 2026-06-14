@@ -107,6 +107,18 @@ function Osd() {
               await obsService.toggleVirtualCam();
             } else if (btn.action?.type === 'obs_take_screenshot' && btn.action.payload) {
               await obsService.takeScreenshot(btn.action.payload);
+            } else if (btn.action?.type === 'sys_volume_up') {
+              await invoke('trigger_sys_key', { keyCode: 175 });
+            } else if (btn.action?.type === 'sys_volume_down') {
+              await invoke('trigger_sys_key', { keyCode: 174 });
+            } else if (btn.action?.type === 'sys_volume_mute') {
+              await invoke('trigger_sys_key', { keyCode: 173 });
+            } else if (btn.action?.type === 'sys_media_next') {
+              await invoke('trigger_sys_key', { keyCode: 176 });
+            } else if (btn.action?.type === 'sys_media_prev') {
+              await invoke('trigger_sys_key', { keyCode: 177 });
+            } else if (btn.action?.type === 'sys_media_play_pause') {
+              await invoke('trigger_sys_key', { keyCode: 179 });
             }
           });
           newHotkeys.push(btn.triggerHotkey);
@@ -232,6 +244,18 @@ function Osd() {
                 await obsService.toggleVirtualCam();
               } else if (btnData?.action?.type === 'obs_take_screenshot' && btnData.action.payload) {
                 await obsService.takeScreenshot(btnData.action.payload);
+              } else if (btnData?.action?.type === 'sys_volume_up') {
+                await invoke('trigger_sys_key', { keyCode: 175 });
+              } else if (btnData?.action?.type === 'sys_volume_down') {
+                await invoke('trigger_sys_key', { keyCode: 174 });
+              } else if (btnData?.action?.type === 'sys_volume_mute') {
+                await invoke('trigger_sys_key', { keyCode: 173 });
+              } else if (btnData?.action?.type === 'sys_media_next') {
+                await invoke('trigger_sys_key', { keyCode: 176 });
+              } else if (btnData?.action?.type === 'sys_media_prev') {
+                await invoke('trigger_sys_key', { keyCode: 177 });
+              } else if (btnData?.action?.type === 'sys_media_play_pause') {
+                await invoke('trigger_sys_key', { keyCode: 179 });
               }
             };
 

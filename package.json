@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "tauri dev"
+    "start": "tauri dev",
+    "kill-all": "taskkill /F /IM virtual-stream-deck.exe /IM cargo.exe /T 2>nul || exit 0"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

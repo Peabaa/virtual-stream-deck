@@ -910,6 +910,7 @@ function Dashboard() {
                   <button 
                     onClick={async () => {
                       try {
+
                         await obsService.saveSettings(obsUrl, obsPassword);
                         await obsService.connect();
                       } catch (err: any) {

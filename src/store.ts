@@ -12,7 +12,13 @@ export type ActionType =
   | 'obs_toggle_stream'
   | 'obs_toggle_record'
   | 'obs_toggle_virtual_cam'
-  | 'obs_take_screenshot';
+  | 'obs_take_screenshot'
+  | 'sys_volume_up'
+  | 'sys_volume_down'
+  | 'sys_volume_mute'
+  | 'sys_media_play_pause'
+  | 'sys_media_next'
+  | 'sys_media_prev';
 
 export interface DeckButtonAction {
   type: ActionType;

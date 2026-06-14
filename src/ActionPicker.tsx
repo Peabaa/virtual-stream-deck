@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ActionType } from './store';
-import { Ban, Link, FolderOpen, Keyboard, Zap, MonitorPlay, Clapperboard, Eye, Mic, Radio, CircleDot, Webcam, Image as ImageIcon, Laptop } from 'lucide-react';
+import { Ban, Link, FolderOpen, Keyboard, Zap, MonitorPlay, Clapperboard, Eye, Mic, Radio, CircleDot, Webcam, Image as ImageIcon, Laptop, Volume2, Volume1, VolumeX, PlayCircle, SkipForward, SkipBack, Cpu } from 'lucide-react';
 
 interface ActionDefinition {
   type: ActionType;
@@ -41,6 +41,19 @@ const ACTION_CATEGORIES: ActionCategory[] = [
       { type: 'obs_toggle_record', label: 'Toggle Record', description: 'Start or stop recording.', icon: CircleDot },
       { type: 'obs_toggle_virtual_cam', label: 'Toggle Virtual Cam', description: 'Start or stop virtual camera.', icon: Webcam },
       { type: 'obs_take_screenshot', label: 'Take Screenshot', description: 'Capture the current OBS program.', icon: ImageIcon },
+    ]
+  },
+  {
+    id: 'system',
+    name: 'Windows System',
+    icon: Cpu,
+    actions: [
+      { type: 'sys_volume_up', label: 'Volume Up', description: 'Increase the master volume.', icon: Volume2 },
+      { type: 'sys_volume_down', label: 'Volume Down', description: 'Decrease the master volume.', icon: Volume1 },
+      { type: 'sys_volume_mute', label: 'Toggle Mute', description: 'Mute or unmute the system.', icon: VolumeX },
+      { type: 'sys_media_play_pause', label: 'Play / Pause', description: 'Toggle media playback.', icon: PlayCircle },
+      { type: 'sys_media_next', label: 'Next Track', description: 'Skip to the next track.', icon: SkipForward },
+      { type: 'sys_media_prev', label: 'Previous Track', description: 'Go to the previous track.', icon: SkipBack },
     ]
   }
 ];
