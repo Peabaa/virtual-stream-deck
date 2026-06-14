@@ -27,7 +27,7 @@ tauri-plugin-shell = "2"
 enigo = "0.1.2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = ["winuser"] }
+winapi = { version = "0.3.9", features = ["winuser", "psapi", "processthreadsapi", "handleapi", "winnt"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"

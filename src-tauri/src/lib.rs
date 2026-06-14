@@ -145,6 +145,56 @@ fn trigger_sys_combo(modifiers: Vec<u16>, key_code: u16) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(windows)]
+            {
+                use tauri::{Manager, Emitter};
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    use winapi::um::winuser::{GetForegroundWindow, GetWindowThreadProcessId};
+                    use winapi::um::processthreadsapi::OpenProcess;
+                    use winapi::um::psapi::GetModuleFileNameExW;
+                    use winapi::um::winnt::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+                    use std::os::windows::ffi::OsStringExt;
+                    use std::path::Path;
+
+                    let mut last_exe = String::new();
+
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_millis(1000));
+                        unsafe {
+                            let hwnd = GetForegroundWindow();
+                            if hwnd.is_null() { continue; }
+
+                            let mut pid = 0;
+                            GetWindowThreadProcessId(hwnd, &mut pid);
+                            if pid == 0 { continue; }
+
+                            let handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, pid);
+                            if handle.is_null() { continue; }
+
+                            let mut buffer = [0u16; 1024];
+                            let len = GetModuleFileNameExW(handle, std::ptr::null_mut(), buffer.as_mut_ptr(), buffer.len() as u32);
+                            winapi::um::handleapi::CloseHandle(handle);
+
+                            if len > 0 {
+                                let path_str = std::ffi::OsString::from_wide(&buffer[..len as usize]);
+                                if let Some(path) = Path::new(&path_str).file_name() {
+                                    if let Some(name) = path.to_str() {
+                                        let current_exe = name.to_lowercase();
+                                        if current_exe != last_exe {
+                                            last_exe = current_exe.clone();
+                                            let _ = app_handle.emit("active-window-changed", current_exe);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())

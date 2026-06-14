@@ -3,7 +3,7 @@ import HotkeyInput from './HotkeyInput';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
-import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
+import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, saveBaseProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
 import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
 import { ActionPicker, ACTION_DEFS } from './ActionPicker';
 import { obsService, ConnectionStatus, ObsState } from './obsService';
@@ -82,6 +82,13 @@ function Dashboard() {
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
   const [obsUrl, setObsUrl] = useState<string>('ws://127.0.0.1:4455');
   const [obsPassword, setObsPassword] = useState<string>('');
+  const [isDetectingApp, setIsDetectingApp] = useState<boolean>(false);
+  const isDetectingAppRef = useRef<boolean>(false);
+  const draftProfileRef = useRef<DeckProfile>(draftProfile);
+
+  useEffect(() => {
+    draftProfileRef.current = draftProfile;
+  }, [draftProfile]);
   
   const dragSourceRef = useRef<string | null>(null);
   const isDraggingRef = useRef<boolean>(false);
@@ -89,7 +96,13 @@ function Dashboard() {
 
   // Load initial profiles on mount
   useEffect(() => {
-    Promise.all([loadProfiles(), loadEquippedProfileId(), obsService.loadSettings()]).then(([loadedProfiles, eqId, obsSettings]) => {
+    const fetchData = async () => {
+      const [loadedProfiles, eqId, obsSettings] = await Promise.all([
+        loadProfiles(), 
+        loadEquippedProfileId(), 
+        obsService.loadSettings()
+      ]);
+      
       setProfiles(loadedProfiles);
       setEquippedProfileId(eqId);
       
@@ -100,13 +113,31 @@ function Dashboard() {
       setActiveProfileId(activeId);
       setDraftProfile(loadedProfiles[activeId] || DEFAULT_PROFILE);
       setHasUnsavedChanges(false);
+    };
+    fetchData();
+
+    // Listen for active window changes just to keep the equipped profile UI in sync
+    const unlistenWindow = listen<string>('active-window-changed', async (event) => {
+      const exeName = event.payload;
+
+      if (isDetectingAppRef.current && exeName !== 'virtual-stream-deck.exe') {
+        setDraftProfile({ ...draftProfileRef.current, linkedApp: exeName });
+        setHasUnsavedChanges(true);
+        isDetectingAppRef.current = false;
+        setIsDetectingApp(false);
+      }
+
+      const eqId = await loadEquippedProfileId();
+      setEquippedProfileId(eqId);
     });
 
     const unlistenStatus = obsService.onStatusChange(setObsStatus);
     const unlistenObsState = obsService.onObsStateChange(setObsState);
+    
     return () => {
         unlistenStatus();
         unlistenObsState();
+        unlistenWindow.then(f => f());
     };
   }, []);
 
@@ -226,6 +257,7 @@ function Dashboard() {
     }
     setEquippedProfileId(activeProfileId);
     await saveEquippedProfileId(activeProfileId);
+    await saveBaseProfileId(activeProfileId); // Manually equipped, so it becomes the base
     await emit('profile_updated');
   };
 
@@ -433,7 +465,39 @@ function Dashboard() {
                   </div>
                 </div>
                 
-                <button onClick={handleCreateNewProfile} style={{ padding: '6px 12px', cursor: 'pointer' }}>+ New</button>
+                <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '10px' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Linked App (.exe):</label>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="obs64.exe"
+                      value={draftProfile.linkedApp || ''}
+                      onChange={(e) => updateDraft({ ...draftProfile, linkedApp: e.target.value })}
+                      style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', width: '120px' }}
+                    />
+                    <button 
+                      onClick={() => {
+                        isDetectingAppRef.current = !isDetectingApp;
+                        setIsDetectingApp(!isDetectingApp);
+                      }}
+                      style={{ 
+                        padding: '6px 10px', 
+                        cursor: 'pointer', 
+                        backgroundColor: isDetectingApp ? '#d32f2f' : '#333', 
+                        color: 'white', 
+                        border: '1px solid #555', 
+                        borderRadius: '4px',
+                        fontWeight: 'bold',
+                        animation: isDetectingApp ? 'pulse-red 1.5s infinite' : 'none'
+                      }}
+                      title="Detect Active App"
+                    >
+                      {isDetectingApp ? "Listening..." : "🎯 Detect"}
+                    </button>
+                  </div>
+                </div>
+
+                <button onClick={handleCreateNewProfile} style={{ padding: '6px 12px', cursor: 'pointer', marginLeft: '10px' }}>+ New</button>
                 
                 <div style={{ width: '1px', height: '30px', backgroundColor: '#555' }} />
                 

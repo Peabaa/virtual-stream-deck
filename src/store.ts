@@ -40,6 +40,7 @@ export interface DeckButtonData {
 export interface DeckProfile {
   id: string;
   name: string;
+  linkedApp?: string;
   osdHotkey?: string;
   requireOsdVisible?: boolean;
   rows: number;
@@ -92,5 +93,18 @@ export async function loadEquippedProfileId(): Promise<string> {
 export async function saveEquippedProfileId(id: string) {
   const store = await getStore();
   await store.set('equippedProfileId', id);
+  await store.save();
+}
+
+export async function loadBaseProfileId(): Promise<string> {
+  const store = await getStore();
+  try { await store.reload(); } catch (e) {}
+  const baseId = await store.get<string>('baseProfileId');
+  return baseId || 'default';
+}
+
+export async function saveBaseProfileId(id: string) {
+  const store = await getStore();
+  await store.set('baseProfileId', id);
   await store.save();
 }

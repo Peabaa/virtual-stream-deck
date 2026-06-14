@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-shell';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { invoke } from '@tauri-apps/api/core';
-import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
+import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, loadBaseProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
 import { CURATED_ICONS, IconName } from './IconPicker';
 import { obsService, ObsState } from './obsService';
 import './App.css';
@@ -27,6 +27,44 @@ function Osd() {
       obsService.connect().catch(e => console.error("OBS Connection failed", e));
     }
   };
+
+  useEffect(() => {
+    const unlistenWindow = listen<string>('active-window-changed', async (event) => {
+      const exeName = event.payload;
+      console.log('Active window changed:', exeName);
+      
+      const allProfiles = await loadProfiles();
+      const currentEquippedId = await loadEquippedProfileId();
+      
+      // Find a profile that links to this exe
+      let matchedProfileId = null;
+      for (const p of Object.values(allProfiles)) {
+        if (p.linkedApp && p.linkedApp.toLowerCase() === exeName.toLowerCase()) {
+          matchedProfileId = p.id;
+          break;
+        }
+      }
+
+      if (matchedProfileId) {
+        if (matchedProfileId !== currentEquippedId) {
+          console.log(`Auto-switching to profile ${matchedProfileId} for ${exeName}`);
+          await saveEquippedProfileId(matchedProfileId);
+          fetchProfile();
+        }
+      } else {
+        const baseId = await loadBaseProfileId();
+        if (currentEquippedId !== baseId) {
+          console.log(`Auto-switching back to base profile ${baseId}`);
+          await saveEquippedProfileId(baseId);
+          fetchProfile();
+        }
+      }
+    });
+
+    return () => {
+      unlistenWindow.then(f => f());
+    };
+  }, []);
 
   const setupHotkeys = async (p: DeckProfile) => {
     for (const hk of registeredHotkeysRef.current) {
