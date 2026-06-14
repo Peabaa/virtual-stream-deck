@@ -120,7 +120,16 @@ function Osd() {
             } else if (btn.action?.type === 'sys_media_play_pause') {
               await invoke('trigger_sys_key', { keyCode: 179 });
             } else if (btn.action?.type === 'sys_send_keypress' && btn.action.payload) {
-              await invoke('trigger_sys_key', { keyCode: parseInt(btn.action.payload, 10) });
+              try {
+                const parsed = JSON.parse(btn.action.payload);
+                if (parsed.modifiers && parsed.modifiers.length > 0) {
+                  await invoke('trigger_sys_combo', { modifiers: parsed.modifiers, keyCode: parseInt(parsed.key, 10) });
+                } else {
+                  await invoke('trigger_sys_key', { keyCode: parseInt(parsed.key || parsed, 10) });
+                }
+              } catch (e) {
+                await invoke('trigger_sys_key', { keyCode: parseInt(btn.action.payload, 10) });
+              }
             }
           });
           newHotkeys.push(btn.triggerHotkey);
@@ -259,7 +268,16 @@ function Osd() {
               } else if (btnData?.action?.type === 'sys_media_play_pause') {
                 await invoke('trigger_sys_key', { keyCode: 179 });
               } else if (btnData?.action?.type === 'sys_send_keypress' && btnData.action.payload) {
-                await invoke('trigger_sys_key', { keyCode: parseInt(btnData.action.payload, 10) });
+                try {
+                  const parsed = JSON.parse(btnData.action.payload);
+                  if (parsed.modifiers && parsed.modifiers.length > 0) {
+                    await invoke('trigger_sys_combo', { modifiers: parsed.modifiers, keyCode: parseInt(parsed.key, 10) });
+                  } else {
+                    await invoke('trigger_sys_key', { keyCode: parseInt(parsed.key || parsed, 10) });
+                  }
+                } catch (e) {
+                  await invoke('trigger_sys_key', { keyCode: parseInt(btnData.action.payload, 10) });
+                }
               }
             };
 

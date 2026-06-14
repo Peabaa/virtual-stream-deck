@@ -814,28 +814,66 @@ function Dashboard() {
                     </div>
                   )}
 
-                  {selectedButtonData.action?.type === 'sys_send_keypress' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Select Key to Simulate</label>
-                      <select 
-                        value={selectedButtonData.action?.payload || ''}
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'sys_send_keypress', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      >
-                        <option value="" disabled>Select a key...</option>
-                        {KEYPRESS_OPTIONS.map((group, i) => (
-                          <optgroup key={i} label={group.group}>
-                            {group.options.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>This key will be pressed exactly as if you struck it on a real keyboard.</p>
-                    </div>
-                  )}
+                  {selectedButtonData.action?.type === 'sys_send_keypress' && (() => {
+                    let currentPayload: { modifiers: number[], key: string } = { modifiers: [], key: '' };
+                    if (selectedButtonData.action?.payload) {
+                      try {
+                        const parsed = JSON.parse(selectedButtonData.action.payload);
+                        if (parsed.key !== undefined) currentPayload = parsed;
+                        else currentPayload.key = selectedButtonData.action.payload;
+                      } catch (e) {
+                        currentPayload.key = selectedButtonData.action.payload;
+                      }
+                    }
+
+                    const handleComboUpdate = (mods: number[], key: string) => {
+                      handleButtonUpdate(selectedButtonData.id, {
+                        action: { type: 'sys_send_keypress', payload: JSON.stringify({ modifiers: mods, key }) }
+                      });
+                    };
+
+                    const toggleMod = (mod: number) => {
+                      const mods = currentPayload.modifiers.includes(mod) 
+                        ? currentPayload.modifiers.filter(m => m !== mod)
+                        : [...currentPayload.modifiers, mod];
+                      handleComboUpdate(mods, currentPayload.key);
+                    };
+
+                    return (
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Combo Builder</label>
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: '#111', borderRadius: '4px', border: '1px solid #555' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                            <input type="checkbox" checked={currentPayload.modifiers.includes(17)} onChange={() => toggleMod(17)} /> Ctrl
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                            <input type="checkbox" checked={currentPayload.modifiers.includes(16)} onChange={() => toggleMod(16)} /> Shift
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                            <input type="checkbox" checked={currentPayload.modifiers.includes(18)} onChange={() => toggleMod(18)} /> Alt
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                            <input type="checkbox" checked={currentPayload.modifiers.includes(91)} onChange={() => toggleMod(91)} /> Win
+                          </label>
+                        </div>
+                        <select 
+                          value={currentPayload.key}
+                          onChange={e => handleComboUpdate(currentPayload.modifiers, e.target.value)}
+                          style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+                        >
+                          <option value="" disabled>Select a main key...</option>
+                          {KEYPRESS_OPTIONS.map((group, i) => (
+                            <optgroup key={i} label={group.group}>
+                              {group.options.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Select modifiers and a main key to trigger them simultaneously via the Windows API.</p>
+                      </div>
+                    );
+                  })()}
 
                   {selectedButtonData.action?.type === 'obs_switch_scene' && (
                     <div>
