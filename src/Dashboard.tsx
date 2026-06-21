@@ -622,6 +622,9 @@ function Dashboard() {
       
       {/* Left Sidebar */}
       <div style={{ width: '260px', backgroundColor: 'rgba(20, 20, 25, 0.8)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', padding: '20px', flexShrink: 0 }}>
+        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+          <img src="/vsdLogo.png" alt="Virtual Stream Deck Logo" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+        </div>
         <h2 style={{ margin: '0 0 10px 0', fontSize: '1.4rem', color: '#fff', textAlign: 'center' }}>Virtual Stream Deck</h2>
         <h3 style={{ margin: '0 0 40px 0', fontSize: '1.0rem', color: '#fff', textAlign: 'center', fontStyle: 'italic' }}>By MD Pastor</h3>
         <button 

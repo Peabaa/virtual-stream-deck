@@ -243,6 +243,11 @@ pub fn run() {
         })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::default().with_state_flags(
+            tauri_plugin_window_state::StateFlags::SIZE | 
+            tauri_plugin_window_state::StateFlags::POSITION |
+            tauri_plugin_window_state::StateFlags::DECORATIONS
+        ).build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))

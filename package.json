@@ -17,6 +17,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.2",
+    "@tauri-apps/plugin-window-state": "^2.4.1",
     "lucide-react": "^1.17.0",
     "obs-websocket-js": "^5.0.8",
     "react": "^19.1.0",
