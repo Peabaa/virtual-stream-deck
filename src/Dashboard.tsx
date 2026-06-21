@@ -77,7 +77,7 @@ function Dashboard() {
   const [dragSourceId, setDragSourceId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
-  const [isActionPickerOpen, setIsActionPickerOpen] = useState<boolean>(false);
+  const [activeActionIndex, setActiveActionIndex] = useState<number | null>(null);
   const [currentTab, setCurrentTab] = useState<'editor' | 'settings'>('editor');
   const [obsStatus, setObsStatus] = useState<ConnectionStatus>(obsService.getStatus());
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
@@ -413,6 +413,209 @@ function Dashboard() {
   const selectedButtonData = selectedButtonId 
     ? (draftProfile.buttons[selectedButtonId] || { id: selectedButtonId, label: selectedButtonId, color: 'rgba(255, 255, 255, 0.08)' })
     : null;
+
+  const renderActionPayloadEditor = (act: DeckButtonAction | undefined, index: number) => {
+    if (!act) return null;
+    const updateAction = (payload: string) => {
+      if (!selectedButtonId) return;
+      const currentActs = selectedButtonData?.actions || (selectedButtonData?.action ? [selectedButtonData.action] : []);
+      const newActs = [...currentActs];
+      newActs[index] = { type: act.type, payload };
+      handleButtonUpdate(selectedButtonId, { actions: newActs });
+    };
+
+    return (
+      <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        {act.type === 'delay' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Delay (Milliseconds)</label>
+            <input 
+              type="number" 
+              placeholder="1000"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>1000 ms = 1 second. Execution will pause here.</p>
+          </div>
+        )}
+
+        {act.type === 'open_url' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Payload</label>
+            <input 
+              type="text" 
+              placeholder="https://youtube.com or C:/app.exe"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Enter a web link or an absolute file path.</p>
+          </div>
+        )}
+
+        {act.type === 'open_folder' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Folder</label>
+            <select 
+              value={act.payload || ''}
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            >
+              <option value="" disabled>Select a profile...</option>
+              {Object.values(profiles).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Instantly swap your layout to this profile.</p>
+          </div>
+        )}
+
+        {act.type === 'type_text' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Text to Type</label>
+            <textarea 
+              placeholder="Hello World! This is a test."
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', resize: 'vertical', minHeight: '60px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Type long paragraphs here. All uppercase letters and symbols are perfectly preserved.</p>
+          </div>
+        )}
+
+        {act.type === 'run_macro' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Macro Sequence</label>
+            <input 
+              type="text" 
+              placeholder="{+CTRL}c{-CTRL}"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Wrap modifiers in brackets. Examples: {'{+CTRL}c{-CTRL}'} or {'{ENTER}'}. Do not use for plain text.</p>
+
+          </div>
+        )}
+
+        {act.type === 'sys_send_keypress' && (() => {
+          let currentPayload: { modifiers: number[], key: string } = { modifiers: [], key: '' };
+          if (act.payload) {
+            try {
+              const parsed = JSON.parse(act.payload);
+              if (parsed.key !== undefined) currentPayload = parsed;
+              else currentPayload.key = act.payload;
+            } catch (e) {
+              currentPayload.key = act.payload;
+            }
+          }
+
+          const handleComboUpdate = (mods: number[], key: string) => {
+            updateAction(JSON.stringify({ modifiers: mods, key }));
+          };
+
+          const toggleMod = (mod: number) => {
+            const mods = currentPayload.modifiers.includes(mod) 
+              ? currentPayload.modifiers.filter(m => m !== mod)
+              : [...currentPayload.modifiers, mod];
+            handleComboUpdate(mods, currentPayload.key);
+          };
+
+          return (
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Combo Builder</label>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: '#111', borderRadius: '4px', border: '1px solid #555' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={currentPayload.modifiers.includes(17)} onChange={() => toggleMod(17)} /> Ctrl
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={currentPayload.modifiers.includes(16)} onChange={() => toggleMod(16)} /> Shift
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={currentPayload.modifiers.includes(18)} onChange={() => toggleMod(18)} /> Alt
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={currentPayload.modifiers.includes(91)} onChange={() => toggleMod(91)} /> Win
+                </label>
+              </div>
+              <select 
+                value={currentPayload.key}
+                onChange={e => handleComboUpdate(currentPayload.modifiers, e.target.value)}
+                style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+              >
+                <option value="" disabled>Select a main key...</option>
+                {KEYPRESS_OPTIONS.map((group, i) => (
+                  <optgroup key={i} label={group.group}>
+                    {group.options.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Select modifiers and a main key to trigger them simultaneously via the Windows API.</p>
+            </div>
+          );
+        })()}
+
+        {act.type === 'obs_switch_scene' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Scene Name</label>
+            <input 
+              type="text" 
+              placeholder="Gameplay"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Scene to switch to.</p>
+          </div>
+        )}
+
+        {act.type === 'obs_toggle_source' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Source Name</label>
+            <input 
+              type="text" 
+              placeholder="Webcam"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Source to toggle in the current scene.</p>
+          </div>
+        )}
+
+        {act.type === 'obs_toggle_mute' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Audio Source Name</label>
+            <input 
+              type="text" 
+              placeholder="Mic/Aux"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Audio source to toggle mute.</p>
+          </div>
+        )}
+
+        {act.type === 'obs_take_screenshot' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Save Folder Path</label>
+            <input 
+              type="text" 
+              placeholder="C:\Users\Name\Pictures"
+              value={act.payload || ''} 
+              onChange={e => updateAction(e.target.value)}
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
+            />
+            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The absolute path to the folder where the screenshot of the Current Program Scene will be saved.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: 'flex', color: 'white', fontFamily: "'Outfit', sans-serif", backgroundColor: '#0f0f13', width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
@@ -781,232 +984,89 @@ function Dashboard() {
                   </div>
                 </div>
                 <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Action Engine</label>
-                  
-                  <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Action Type</label>
-                    <button 
-                      onClick={() => setIsActionPickerOpen(true)}
-                      style={{ 
-                        width: '100%', padding: '12px 15px', boxSizing: 'border-box', 
-                        backgroundColor: 'rgba(57, 108, 216, 0.1)', color: '#74b9ff', 
-                        border: '1px solid rgba(57, 108, 216, 0.4)', borderRadius: '8px', 
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                        transition: 'all 0.2s', textAlign: 'left'
-                      }}
-                      onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.2)'; }}
-                      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.1)'; }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center' }}>
-                        {(() => {
-                          const actionDef = selectedButtonData.action?.type ? ACTION_DEFS[selectedButtonData.action.type] : null;
-                          if (actionDef) {
-                            const Icon = actionDef.icon;
-                            return <Icon size={28} />;
-                          }
-                          return '🚫';
-                        })()}
-                      </span>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '1rem', color: 'white' }}>
-                          {selectedButtonData.action?.type && ACTION_DEFS[selectedButtonData.action.type] ? ACTION_DEFS[selectedButtonData.action.type].label : 'None'}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', color: '#74b9ff' }}>Click to change action...</span>
-                      </div>
-                    </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <label style={{ fontWeight: 'bold', margin: 0 }}>Action Engine (Chain)</label>
                   </div>
+                  
+                  {(() => {
+                    const actions = selectedButtonData.actions || (selectedButtonData.action ? [selectedButtonData.action] : []);
+                    if (actions.length === 0) return <p style={{ color: '#aaa', fontSize: '0.9rem', fontStyle: 'italic', textAlign: 'center', margin: '20px 0' }}>No actions configured.</p>;
 
-                  {selectedButtonData.action?.type === 'open_url' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Payload</label>
-                      <input 
-                        type="text" 
-                        placeholder="https://youtube.com or C:/app.exe"
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'open_url', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Enter a web link or an absolute file path.</p>
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'open_folder' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Folder</label>
-                      <select 
-                        value={selectedButtonData.action?.payload || ''}
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'open_folder', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      >
-                        <option value="" disabled>Select a profile...</option>
-                        {Object.values(profiles).map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Instantly swap your layout to this profile.</p>
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'type_text' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Text to Type</label>
-                      <textarea 
-                        placeholder="Hello World! This is a test."
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'type_text', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', resize: 'vertical', minHeight: '60px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Type long paragraphs here. All uppercase letters and symbols are perfectly preserved.</p>
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'run_macro' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Macro Sequence</label>
-                      <input 
-                        type="text" 
-                        placeholder="{+CTRL}c{-CTRL}"
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'run_macro', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Wrap modifiers in brackets. Examples: {'{+CTRL}c{-CTRL}'} or {'{ENTER}'}. Do not use for plain text.</p>
-
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'sys_send_keypress' && (() => {
-                    let currentPayload: { modifiers: number[], key: string } = { modifiers: [], key: '' };
-                    if (selectedButtonData.action?.payload) {
-                      try {
-                        const parsed = JSON.parse(selectedButtonData.action.payload);
-                        if (parsed.key !== undefined) currentPayload = parsed;
-                        else currentPayload.key = selectedButtonData.action.payload;
-                      } catch (e) {
-                        currentPayload.key = selectedButtonData.action.payload;
-                      }
-                    }
-
-                    const handleComboUpdate = (mods: number[], key: string) => {
-                      handleButtonUpdate(selectedButtonData.id, {
-                        action: { type: 'sys_send_keypress', payload: JSON.stringify({ modifiers: mods, key }) }
-                      });
-                    };
-
-                    const toggleMod = (mod: number) => {
-                      const mods = currentPayload.modifiers.includes(mod) 
-                        ? currentPayload.modifiers.filter(m => m !== mod)
-                        : [...currentPayload.modifiers, mod];
-                      handleComboUpdate(mods, currentPayload.key);
-                    };
-
-                    return (
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Combo Builder</label>
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: '#111', borderRadius: '4px', border: '1px solid #555' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={currentPayload.modifiers.includes(17)} onChange={() => toggleMod(17)} /> Ctrl
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={currentPayload.modifiers.includes(16)} onChange={() => toggleMod(16)} /> Shift
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={currentPayload.modifiers.includes(18)} onChange={() => toggleMod(18)} /> Alt
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={currentPayload.modifiers.includes(91)} onChange={() => toggleMod(91)} /> Win
-                          </label>
+                    return actions.map((act, index) => (
+                      <div key={index} style={{ marginBottom: index === actions.length - 1 ? 0 : '15px', padding: '15px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.9rem', color: '#aaa', fontWeight: 'bold' }}>Action {index + 1}</span>
+                          <button 
+                            onClick={() => {
+                              const newActs = [...actions];
+                              newActs.splice(index, 1);
+                              handleButtonUpdate(selectedButtonData.id, { actions: newActs });
+                            }}
+                            style={{ background: 'transparent', border: '1px solid rgba(255,85,85,0.3)', color: '#ff5555', cursor: 'pointer', fontSize: '0.8rem', padding: '4px 8px', borderRadius: '4px' }}
+                          >
+                            Remove
+                          </button>
                         </div>
-                        <select 
-                          value={currentPayload.key}
-                          onChange={e => handleComboUpdate(currentPayload.modifiers, e.target.value)}
-                          style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                        >
-                          <option value="" disabled>Select a main key...</option>
-                          {KEYPRESS_OPTIONS.map((group, i) => (
-                            <optgroup key={i} label={group.group}>
-                              {group.options.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
-                        <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Select modifiers and a main key to trigger them simultaneously via the Windows API.</p>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Action Type</label>
+                          <button 
+                            onClick={() => setActiveActionIndex(index)}
+                            style={{ 
+                              width: '100%', padding: '12px 15px', boxSizing: 'border-box', 
+                              backgroundColor: 'rgba(57, 108, 216, 0.1)', color: '#74b9ff', 
+                              border: '1px solid rgba(57, 108, 216, 0.4)', borderRadius: '8px', 
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                              transition: 'all 0.2s', textAlign: 'left'
+                            }}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center' }}>
+                              {(() => {
+                                const actionDef = act.type ? ACTION_DEFS[act.type] : null;
+                                if (actionDef) {
+                                  const Icon = actionDef.icon;
+                                  return <Icon size={28} />;
+                                }
+                                return '🚫';
+                              })()}
+                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontWeight: 'bold', fontSize: '1rem', color: 'white' }}>
+                                {act.type && ACTION_DEFS[act.type] ? ACTION_DEFS[act.type].label : 'None'}
+                              </span>
+                              <span style={{ fontSize: '0.8rem', color: '#74b9ff' }}>Click to change action...</span>
+                            </div>
+                          </button>
+                        </div>
+
+                        {renderActionPayloadEditor(act, index)}
                       </div>
-                    );
+                    ));
                   })()}
 
-                  {selectedButtonData.action?.type === 'obs_switch_scene' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Scene Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="Gameplay"
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'obs_switch_scene', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Scene to switch to.</p>
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'obs_toggle_source' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Source Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="Webcam"
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'obs_toggle_source', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Source to toggle in the current scene.</p>
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'obs_toggle_mute' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Audio Source Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="Mic/Aux"
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'obs_toggle_mute', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Audio source to toggle mute.</p>
-                    </div>
-                  )}
-
-                  {selectedButtonData.action?.type === 'obs_take_screenshot' && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Save Folder Path</label>
-                      <input 
-                        type="text" 
-                        placeholder="C:\Users\Name\Pictures"
-                        value={selectedButtonData.action?.payload || ''} 
-                        onChange={e => handleButtonUpdate(selectedButtonData.id, { 
-                          action: { type: 'obs_take_screenshot', payload: e.target.value } 
-                        })}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      />
-                      <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The absolute path to the folder where the screenshot of the Current Program Scene will be saved.</p>
-                    </div>
-                  )}
+                  <button 
+                    onClick={() => {
+                      const currentActs = selectedButtonData.actions || (selectedButtonData.action ? [selectedButtonData.action] : []);
+                      handleButtonUpdate(selectedButtonData.id, { actions: [...currentActs, { type: 'none', payload: '' }] });
+                    }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      backgroundColor: 'rgba(57, 108, 216, 0.15)', 
+                      color: '#74b9ff', 
+                      border: '1px dashed rgba(57, 108, 216, 0.5)', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer', 
+                      fontSize: '0.95rem', 
+                      fontWeight: 'bold',
+                      marginTop: '10px',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.25)'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.15)'}
+                  >
+                    + Add Action
+                  </button>
                 </div>
 
                 <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
@@ -1194,11 +1254,14 @@ function Dashboard() {
         }} 
       />
       <ActionPicker
-        isOpen={isActionPickerOpen}
-        onClose={() => setIsActionPickerOpen(false)}
+        isOpen={activeActionIndex !== null}
+        onClose={() => setActiveActionIndex(null)}
         onSelect={(actionType) => {
-          if (selectedButtonId) {
-            handleButtonUpdate(selectedButtonId, { action: { type: actionType, payload: '' } });
+          if (selectedButtonId && activeActionIndex !== null) {
+            const currentActions = selectedButtonData?.actions || (selectedButtonData?.action ? [selectedButtonData.action] : []);
+            const newActions = [...currentActions];
+            newActions[activeActionIndex] = { type: actionType, payload: '' };
+            handleButtonUpdate(selectedButtonId, { actions: newActions });
           }
         }}
       />

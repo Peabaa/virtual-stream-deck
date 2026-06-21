@@ -66,6 +66,70 @@ function Osd() {
     };
   }, []);
 
+  const executeActionSequence = async (actions: DeckButtonAction[]) => {
+    for (const act of actions) {
+      if (!act) continue;
+      try {
+        if (act.type === 'delay') {
+          const ms = parseInt(act.payload, 10) || 0;
+          if (ms > 0) {
+            await new Promise(r => setTimeout(r, ms));
+          }
+        } else if (act.type === 'open_url' && act.payload) {
+          let target = act.payload.trim();
+          if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) target = 'https://' + target;
+          await open(target);
+        } else if (act.type === 'open_folder' && act.payload) {
+          await saveEquippedProfileId(act.payload);
+          await emit('profile_updated');
+        } else if (act.type === 'type_text' && act.payload) {
+          await invoke('type_text', { text: act.payload });
+        } else if (act.type === 'run_macro' && act.payload) {
+          await invoke('run_macro', { sequence: act.payload });
+        } else if (act.type === 'obs_switch_scene' && act.payload) {
+          await obsService.switchScene(act.payload);
+        } else if (act.type === 'obs_toggle_source' && act.payload) {
+          await obsService.toggleSource(undefined, act.payload);
+        } else if (act.type === 'obs_toggle_mute' && act.payload) {
+          await obsService.toggleMute(act.payload);
+        } else if (act.type === 'obs_toggle_stream') {
+          await obsService.toggleStream();
+        } else if (act.type === 'obs_toggle_record') {
+          await obsService.toggleRecord();
+        } else if (act.type === 'obs_toggle_virtual_cam') {
+          await obsService.toggleVirtualCam();
+        } else if (act.type === 'obs_take_screenshot' && act.payload) {
+          await obsService.takeScreenshot(act.payload);
+        } else if (act.type === 'sys_volume_up') {
+          await invoke('trigger_sys_key', { keyCode: 175 });
+        } else if (act.type === 'sys_volume_down') {
+          await invoke('trigger_sys_key', { keyCode: 174 });
+        } else if (act.type === 'sys_volume_mute') {
+          await invoke('trigger_sys_key', { keyCode: 173 });
+        } else if (act.type === 'sys_media_play_pause') {
+          await invoke('trigger_sys_key', { keyCode: 179 });
+        } else if (act.type === 'sys_media_next') {
+          await invoke('trigger_sys_key', { keyCode: 176 });
+        } else if (act.type === 'sys_media_prev') {
+          await invoke('trigger_sys_key', { keyCode: 177 });
+        } else if (act.type === 'sys_send_keypress' && act.payload) {
+          try {
+            const parsed = JSON.parse(act.payload);
+            if (parsed.modifiers && parsed.modifiers.length > 0) {
+              await invoke('trigger_sys_combo', { modifiers: parsed.modifiers, keyCode: parseInt(parsed.key, 10) });
+            } else {
+              await invoke('trigger_sys_key', { keyCode: parseInt(parsed.key || parsed, 10) });
+            }
+          } catch (e) {
+            await invoke('trigger_sys_key', { keyCode: parseInt(act.payload, 10) });
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to execute action ${act.type}:`, err);
+      }
+    }
+  };
+
   const setupHotkeys = async (p: DeckProfile) => {
     for (const hk of registeredHotkeysRef.current) {
       if (hk) {
@@ -108,67 +172,8 @@ function Osd() {
               }
             }
 
-            if (btn.action?.type === 'open_url' && btn.action.payload) {
-              let target = btn.action.payload.trim();
-              if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) target = 'https://' + target;
-              try { await open(target); } catch (e) { console.error("Failed to execute action via hotkey:", e); }
-            } else if (btn.action?.type === 'open_folder' && btn.action.payload) {
-              try {
-                await saveEquippedProfileId(btn.action.payload);
-                await emit('profile_updated');
-              } catch (e) {
-                console.error("Failed to swap profile folder via hotkey:", e);
-              }
-            } else if (btn.action?.type === 'type_text' && btn.action.payload) {
-              try {
-                await invoke('type_text', { text: btn.action.payload });
-              } catch (e) {
-                console.error("Failed to type text via hotkey:", e);
-              }
-            } else if (btn.action?.type === 'run_macro' && btn.action.payload) {
-              try {
-                await invoke('run_macro', { sequence: btn.action.payload });
-              } catch (e) {
-                console.error("Failed to run macro via hotkey:", e);
-              }
-            } else if (btn.action?.type === 'obs_switch_scene' && btn.action.payload) {
-              await obsService.switchScene(btn.action.payload);
-            } else if (btn.action?.type === 'obs_toggle_source' && btn.action.payload) {
-              await obsService.toggleSource(undefined, btn.action.payload);
-            } else if (btn.action?.type === 'obs_toggle_mute' && btn.action.payload) {
-              await obsService.toggleMute(btn.action.payload);
-            } else if (btn.action?.type === 'obs_toggle_stream') {
-              await obsService.toggleStream();
-            } else if (btn.action?.type === 'obs_toggle_record') {
-              await obsService.toggleRecord();
-            } else if (btn.action?.type === 'obs_toggle_virtual_cam') {
-              await obsService.toggleVirtualCam();
-            } else if (btn.action?.type === 'obs_take_screenshot' && btn.action.payload) {
-              await obsService.takeScreenshot(btn.action.payload);
-            } else if (btn.action?.type === 'sys_volume_up') {
-              await invoke('trigger_sys_key', { keyCode: 175 });
-            } else if (btn.action?.type === 'sys_volume_down') {
-              await invoke('trigger_sys_key', { keyCode: 174 });
-            } else if (btn.action?.type === 'sys_volume_mute') {
-              await invoke('trigger_sys_key', { keyCode: 173 });
-            } else if (btn.action?.type === 'sys_media_next') {
-              await invoke('trigger_sys_key', { keyCode: 176 });
-            } else if (btn.action?.type === 'sys_media_prev') {
-              await invoke('trigger_sys_key', { keyCode: 177 });
-            } else if (btn.action?.type === 'sys_media_play_pause') {
-              await invoke('trigger_sys_key', { keyCode: 179 });
-            } else if (btn.action?.type === 'sys_send_keypress' && btn.action.payload) {
-              try {
-                const parsed = JSON.parse(btn.action.payload);
-                if (parsed.modifiers && parsed.modifiers.length > 0) {
-                  await invoke('trigger_sys_combo', { modifiers: parsed.modifiers, keyCode: parseInt(parsed.key, 10) });
-                } else {
-                  await invoke('trigger_sys_key', { keyCode: parseInt(parsed.key || parsed, 10) });
-                }
-              } catch (e) {
-                await invoke('trigger_sys_key', { keyCode: parseInt(btn.action.payload, 10) });
-              }
-            }
+            const actionsToRun = btn.actions || (btn.action ? [btn.action] : []);
+            await executeActionSequence(actionsToRun);
           });
           newHotkeys.push(btn.triggerHotkey);
         } catch (e) {
@@ -248,74 +253,9 @@ function Osd() {
             const id = `${x},${y}`;
             const btnData = profile.buttons[id];
             const handleAction = async () => {
-              if (btnData?.action?.type === 'open_url' && btnData.action.payload) {
-                let target = btnData.action.payload.trim();
-                
-                if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}([/].*)?$/.test(target)) {
-                  target = 'https://' + target;
-                }
-
-                try {
-                  await open(target);
-                } catch (e) {
-                  console.error("Failed to execute action:", e);
-                }
-              } else if (btnData?.action?.type === 'open_folder' && btnData.action.payload) {
-                try {
-                  await saveEquippedProfileId(btnData.action.payload);
-                  await emit('profile_updated');
-                } catch (e) {
-                  console.error("Failed to swap profile folder:", e);
-                }
-              } else if (btnData?.action?.type === 'type_text' && btnData.action.payload) {
-                try {
-                  await invoke('type_text', { text: btnData.action.payload });
-                } catch (e) {
-                  console.error("Failed to type text:", e);
-                }
-              } else if (btnData?.action?.type === 'run_macro' && btnData.action.payload) {
-                try {
-                  await invoke('run_macro', { sequence: btnData.action.payload });
-                } catch (e) {
-                  console.error("Failed to run macro:", e);
-                }
-              } else if (btnData?.action?.type === 'obs_switch_scene' && btnData.action.payload) {
-                await obsService.switchScene(btnData.action.payload);
-              } else if (btnData?.action?.type === 'obs_toggle_source' && btnData.action.payload) {
-                await obsService.toggleSource(undefined, btnData.action.payload);
-              } else if (btnData?.action?.type === 'obs_toggle_mute' && btnData.action.payload) {
-                await obsService.toggleMute(btnData.action.payload);
-              } else if (btnData?.action?.type === 'obs_toggle_stream') {
-                await obsService.toggleStream();
-              } else if (btnData?.action?.type === 'obs_toggle_record') {
-                await obsService.toggleRecord();
-              } else if (btnData?.action?.type === 'obs_toggle_virtual_cam') {
-                await obsService.toggleVirtualCam();
-              } else if (btnData?.action?.type === 'obs_take_screenshot' && btnData.action.payload) {
-                await obsService.takeScreenshot(btnData.action.payload);
-              } else if (btnData?.action?.type === 'sys_volume_up') {
-                await invoke('trigger_sys_key', { keyCode: 175 });
-              } else if (btnData?.action?.type === 'sys_volume_down') {
-                await invoke('trigger_sys_key', { keyCode: 174 });
-              } else if (btnData?.action?.type === 'sys_volume_mute') {
-                await invoke('trigger_sys_key', { keyCode: 173 });
-              } else if (btnData?.action?.type === 'sys_media_next') {
-                await invoke('trigger_sys_key', { keyCode: 176 });
-              } else if (btnData?.action?.type === 'sys_media_prev') {
-                await invoke('trigger_sys_key', { keyCode: 177 });
-              } else if (btnData?.action?.type === 'sys_media_play_pause') {
-                await invoke('trigger_sys_key', { keyCode: 179 });
-              } else if (btnData?.action?.type === 'sys_send_keypress' && btnData.action.payload) {
-                try {
-                  const parsed = JSON.parse(btnData.action.payload);
-                  if (parsed.modifiers && parsed.modifiers.length > 0) {
-                    await invoke('trigger_sys_combo', { modifiers: parsed.modifiers, keyCode: parseInt(parsed.key, 10) });
-                  } else {
-                    await invoke('trigger_sys_key', { keyCode: parseInt(parsed.key || parsed, 10) });
-                  }
-                } catch (e) {
-                  await invoke('trigger_sys_key', { keyCode: parseInt(btnData.action.payload, 10) });
-                }
+              if (btnData) {
+                const actionsToRun = btnData.actions || (btnData.action ? [btnData.action] : []);
+                await executeActionSequence(actionsToRun);
               }
             };
 

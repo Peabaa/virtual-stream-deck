@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ActionType } from './store';
-import { Ban, Link, FolderOpen, Keyboard, Zap, MonitorPlay, Clapperboard, Eye, Mic, Radio, CircleDot, Webcam, Image as ImageIcon, Laptop, Volume2, Volume1, VolumeX, PlayCircle, SkipForward, SkipBack, Cpu } from 'lucide-react';
+import { Ban, Link, FolderOpen, Keyboard, Zap, MonitorPlay, Clapperboard, Eye, Mic, Radio, CircleDot, Webcam, Image as ImageIcon, Laptop, Volume2, Volume1, VolumeX, PlayCircle, SkipForward, SkipBack, Cpu, Clock } from 'lucide-react';
 
 interface ActionDefinition {
   type: ActionType;
@@ -23,6 +23,7 @@ const ACTION_CATEGORIES: ActionCategory[] = [
     icon: Laptop,
     actions: [
       { type: 'none', label: 'None', description: 'Do nothing when pressed.', icon: Ban },
+      { type: 'delay', label: 'Delay (Wait)', description: 'Pause execution for X milliseconds.', icon: Clock },
       { type: 'open_url', label: 'Open URL / File', description: 'Launch a website, app, or file.', icon: Link },
       { type: 'open_folder', label: 'Switch Profile', description: 'Instantly swap your deck layout.', icon: FolderOpen },
       { type: 'type_text', label: 'Type Text', description: 'Automatically type a paragraph.', icon: Keyboard },

@@ -2,6 +2,7 @@ import { load, Store } from '@tauri-apps/plugin-store';
 
 export type ActionType = 
   | 'none' 
+  | 'delay'
   | 'open_url' 
   | 'open_folder' 
   | 'type_text' 
@@ -33,7 +34,8 @@ export interface DeckButtonData {
   fontColor?: string;
   imageUrl?: string;
   iconName?: string;
-  action?: DeckButtonAction;
+  action?: DeckButtonAction; // Legacy single action
+  actions?: DeckButtonAction[]; // Multi-action array
   triggerHotkey?: string;
 }
 
