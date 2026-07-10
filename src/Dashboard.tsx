@@ -3,19 +3,23 @@ import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-sh
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
 import { isEnabled as isAutostartEnabled } from '@tauri-apps/plugin-autostart';
-import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, saveBaseProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE } from './store';
+import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, saveBaseProfileId, loadHasSeenOnboarding, saveHasSeenOnboarding, DeckProfile, DeckButtonData, DEFAULT_PROFILE } from './store';
 import IconPicker from './IconPicker';
 import { ActionPicker } from './ActionPicker';
 import { obsService, ConnectionStatus, ObsState } from './obsService';
+import { useToast } from './components/ToastContext';
 import { SettingsView } from './components/SettingsView';
 import { GridCanvas } from './components/GridCanvas';
 import { ButtonEditorSidebar } from './components/ButtonEditorSidebar';
 import { ProfileManagerBar } from './components/ProfileManagerBar';
+import { WelcomeModal } from './components/WelcomeModal';
 
 
 
 
 function Dashboard() {
+  const { showToast } = useToast();
+
   // Profile Management State
   const [profiles, setProfiles] = useState<Record<string, DeckProfile>>({});
   const [activeProfileId, setActiveProfileId] = useState<string>('default');
@@ -29,6 +33,9 @@ function Dashboard() {
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
   const [activeActionIndex, setActiveActionIndex] = useState<number | null>(null);
   const [currentTab, setCurrentTab] = useState<'editor' | 'settings'>('editor');
+  
+  // Onboarding State
+  const [showWelcome, setShowWelcome] = useState(false);
   const [obsStatus, setObsStatus] = useState<ConnectionStatus>(obsService.getStatus());
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
   const [obsUrl, setObsUrl] = useState<string>('ws://127.0.0.1:4455');
@@ -49,10 +56,11 @@ function Dashboard() {
   // Load initial profiles on mount
   useEffect(() => {
     const fetchData = async () => {
-      const [loadedProfiles, eqId, obsSettings] = await Promise.all([
+      const [loadedProfiles, eqId, obsSettings, seenOnboarding] = await Promise.all([
         loadProfiles(), 
         loadEquippedProfileId(), 
-        obsService.loadSettings()
+        obsService.loadSettings(),
+        loadHasSeenOnboarding()
       ]);
       
       setProfiles(loadedProfiles);
@@ -68,6 +76,10 @@ function Dashboard() {
       
       const startupStatus = await isAutostartEnabled();
       setRunOnStartup(startupStatus);
+      
+      if (!seenOnboarding) {
+        setShowWelcome(true);
+      }
     };
     fetchData();
 
@@ -195,6 +207,7 @@ function Dashboard() {
     if (equippedProfileId === activeProfileId) {
       await emit('profile_updated');
     }
+    showToast('Profile Saved Successfully', 'success');
   };
 
   const handleDiscardChanges = () => {
@@ -214,6 +227,7 @@ function Dashboard() {
     await saveEquippedProfileId(activeProfileId);
     await saveBaseProfileId(activeProfileId); // Manually equipped, so it becomes the base
     await emit('profile_updated');
+    showToast(`Equipped profile: ${draftProfile.name}`, 'success');
   };
 
   const handleDeleteProfile = async () => {
@@ -242,6 +256,7 @@ function Dashboard() {
         await saveEquippedProfileId(fallbackId);
         await emit('profile_updated');
       }
+      showToast('Profile Deleted', 'info');
     }
   };
 
@@ -364,6 +379,11 @@ function Dashboard() {
     ? (draftProfile.buttons[selectedButtonId] || { id: selectedButtonId, label: selectedButtonId, color: 'rgba(255, 255, 255, 0.08)' })
     : null;
 
+  const closeWelcome = async () => {
+    setShowWelcome(false);
+    await saveHasSeenOnboarding(true);
+  };
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#0f0f14', color: 'white', fontFamily: 'sans-serif' }}>
       <div style={{ width: '80px', backgroundColor: '#0a0a0d', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', gap: '15px' }}>
@@ -468,6 +488,7 @@ function Dashboard() {
           }
         }}
       />
+      {showWelcome && <WelcomeModal onClose={closeWelcome} />}
     </div>
   );
 }

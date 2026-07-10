@@ -110,3 +110,14 @@ export async function saveBaseProfileId(id: string) {
   await store.set('baseProfileId', id);
   await store.save();
 }
+
+export async function loadHasSeenOnboarding(): Promise<boolean> {
+  const store = await getStore();
+  return (await store.get<boolean>('has_seen_onboarding')) || false;
+}
+
+export async function saveHasSeenOnboarding(hasSeen: boolean): Promise<void> {
+  const store = await getStore();
+  await store.set('has_seen_onboarding', hasSeen);
+  await store.save();
+}

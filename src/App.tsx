@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Osd from './Osd';
 import Dashboard from './Dashboard';
+import { ToastProvider } from './components/ToastContext';
 
 function App() {
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
@@ -11,16 +12,11 @@ function App() {
     setWindowLabel(getCurrentWindow().label);
   }, []);
 
-  if (windowLabel === 'osd') {
-    return <Osd />;
-  }
-
-  if (windowLabel === 'dashboard') {
-    return <Dashboard />;
-  }
-
-  // Fallback while detecting or if window label doesn't match
-  return <div style={{ color: 'white' }}>Loading...</div>;
+  return (
+    <ToastProvider>
+      {windowLabel === 'osd' ? <Osd /> : windowLabel === 'dashboard' ? <Dashboard /> : <div style={{ color: 'white' }}>Loading...</div>}
+    </ToastProvider>
+  );
 }
 
 export default App;

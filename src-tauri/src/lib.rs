@@ -15,6 +15,24 @@ fn type_text(text: &str) -> Result<(), String> {
 
 #[cfg(windows)]
 #[tauri::command]
+fn is_admin() -> bool {
+    use std::os::windows::process::CommandExt;
+    std::process::Command::new("net")
+        .arg("session")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn is_admin() -> bool {
+    true
+}
+
+#[cfg(windows)]
+#[tauri::command]
 fn trigger_sys_key(key_code: u16) -> Result<(), String> {
     use winapi::um::winuser::{SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, MapVirtualKeyW, MAPVK_VK_TO_VSC};
     use std::mem::{size_of, zeroed};
@@ -251,7 +269,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
-        .invoke_handler(tauri::generate_handler![greet, type_text, run_macro, trigger_sys_key, trigger_sys_combo])
+        .invoke_handler(tauri::generate_handler![greet, type_text, run_macro, trigger_sys_key, trigger_sys_combo, is_admin])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

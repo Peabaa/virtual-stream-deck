@@ -7,9 +7,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, loadBaseProfileId, DeckProfile, DEFAULT_PROFILE, DeckButtonAction } from './store';
 import { CURATED_ICONS, IconName } from './IconPicker';
 import { obsService, ObsState } from './obsService';
+import { useToast } from './components/ToastContext';
 import './App.css';
 
 function Osd() {
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<DeckProfile>(DEFAULT_PROFILE);
   const [activeButtonId, setActiveButtonId] = useState<string | null>(null);
   const [obsState, setObsState] = useState<ObsState>(obsService.getObsState());
@@ -126,6 +128,7 @@ function Osd() {
         }
       } catch (err) {
         console.error(`Failed to execute action ${act.type}:`, err);
+        showToast(`Action Failed: ${act.type}`, 'error');
       }
     }
   };

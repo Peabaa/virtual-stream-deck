@@ -1,4 +1,6 @@
 
+import { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import HotkeyInput from '../HotkeyInput';
 import { enable, disable } from '@tauri-apps/plugin-autostart';
 import { obsService, ConnectionStatus } from '../obsService';
@@ -24,10 +26,37 @@ export function SettingsView({
   obsStatus, obsUrl, setObsUrl, obsPassword, setObsPassword,
   hasUnsavedChanges, handleDiscardChanges, handleSaveProfile
 }: SettingsViewProps) {
+  const [showObsGuide, setShowObsGuide] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true); // Default true so it doesn't flash
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const adminStatus = await invoke<boolean>('is_admin');
+        setIsAdmin(adminStatus);
+      } catch (e) {
+        console.error("Failed to check admin status:", e);
+      }
+    };
+    checkAdmin();
+  }, []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
       <h2 style={{ margin: '0 0 10px 0' }}>Global Settings</h2>
       
+      {!isAdmin && (
+        <div style={{ backgroundColor: 'rgba(211, 47, 47, 0.1)', padding: '15px', borderRadius: '12px', border: '1px solid #f44336', color: '#ffcdd2', display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <div style={{ fontSize: '24px' }}>⚠️</div>
+          <div>
+            <h4 style={{ margin: '0 0 5px 0', color: '#f44336' }}>Admin Privileges Recommended</h4>
+            <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.4' }}>
+              Virtual Stream Deck is currently running as a normal user. Some full-screen games (especially those with anti-cheat) will block simulated keystrokes. If your macros are failing in-game, please restart this app as an <b>Administrator</b>.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '1rem', fontWeight: 'bold', marginBottom: '8px' }}>OSD Toggle Hotkey</label>
@@ -89,7 +118,27 @@ export function SettingsView({
           }}>
             {obsStatus.toUpperCase()}
           </span>
+          <button 
+            onClick={() => setShowObsGuide(!showObsGuide)}
+            style={{ marginLeft: 'auto', backgroundColor: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '4px', cursor: 'pointer', padding: '4px 8px', fontSize: '0.8rem' }}
+          >
+            {showObsGuide ? 'Hide Guide' : 'Need Help?'}
+          </button>
         </h3>
+        
+        {showObsGuide && (
+          <div style={{ backgroundColor: 'rgba(57, 108, 216, 0.1)', border: '1px solid rgba(57, 108, 216, 0.3)', padding: '15px', borderRadius: '8px', marginBottom: '15px', color: '#ccc', fontSize: '0.9rem', lineHeight: '1.5' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#74b9ff' }}>How to connect OBS Studio:</h4>
+            <ol style={{ margin: 0, paddingLeft: '20px' }}>
+              <li>Open OBS Studio and click <b>Tools {'>'} WebSocket Server Settings</b>.</li>
+              <li>Check the box for <b>Enable WebSocket server</b>.</li>
+              <li>Make sure the Server Port matches (usually <b>4455</b>).</li>
+              <li>Click <b>Show Connect Info</b> to reveal your Server Password.</li>
+              <li>Copy the port and password into the fields below.</li>
+            </ol>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>WebSocket URL</label>

@@ -29,7 +29,7 @@ tauri-plugin-autostart = "2.5.1"
 tauri-plugin-window-state = "2.0.0"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = ["winuser", "psapi", "processthreadsapi", "handleapi", "winnt"] }
+winapi = { version = "0.3.9", features = ["winuser", "psapi", "processthreadsapi", "handleapi", "winnt", "shlobj", "shellapi"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
