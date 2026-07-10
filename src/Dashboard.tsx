@@ -1,69 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import HotkeyInput from './HotkeyInput';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
-import { enable, disable, isEnabled as isAutostartEnabled } from '@tauri-apps/plugin-autostart';
-import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, saveBaseProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE, ActionType } from './store';
-import IconPicker, { CURATED_ICONS, IconName } from './IconPicker';
-import { ActionPicker, ACTION_DEFS } from './ActionPicker';
+import { isEnabled as isAutostartEnabled } from '@tauri-apps/plugin-autostart';
+import { loadProfiles, saveProfiles, loadEquippedProfileId, saveEquippedProfileId, saveBaseProfileId, DeckProfile, DeckButtonData, DEFAULT_PROFILE } from './store';
+import IconPicker from './IconPicker';
+import { ActionPicker } from './ActionPicker';
 import { obsService, ConnectionStatus, ObsState } from './obsService';
+import { SettingsView } from './components/SettingsView';
+import { GridCanvas } from './components/GridCanvas';
+import { ButtonEditorSidebar } from './components/ButtonEditorSidebar';
+import { ProfileManagerBar } from './components/ProfileManagerBar';
 
-const KEYPRESS_OPTIONS = [
-  { group: "Standard Keys (A-Z)", options: [
-      { label: "A", value: "65" }, { label: "B", value: "66" }, { label: "C", value: "67" },
-      { label: "D", value: "68" }, { label: "E", value: "69" }, { label: "F", value: "70" },
-      { label: "G", value: "71" }, { label: "H", value: "72" }, { label: "I", value: "73" },
-      { label: "J", value: "74" }, { label: "K", value: "75" }, { label: "L", value: "76" },
-      { label: "M", value: "77" }, { label: "N", value: "78" }, { label: "O", value: "79" },
-      { label: "P", value: "80" }, { label: "Q", value: "81" }, { label: "R", value: "82" },
-      { label: "S", value: "83" }, { label: "T", value: "84" }, { label: "U", value: "85" },
-      { label: "V", value: "86" }, { label: "W", value: "87" }, { label: "X", value: "88" },
-      { label: "Y", value: "89" }, { label: "Z", value: "90" },
-  ]},
-  { group: "Numbers & Punctuation", options: [
-      { label: "0", value: "48" }, { label: "1", value: "49" }, { label: "2", value: "50" },
-      { label: "3", value: "51" }, { label: "4", value: "52" }, { label: "5", value: "53" },
-      { label: "6", value: "54" }, { label: "7", value: "55" }, { label: "8", value: "56" },
-      { label: "9", value: "57" }, { label: ";", value: "186" }, { label: "=", value: "187" },
-      { label: ",", value: "188" }, { label: "-", value: "189" }, { label: ".", value: "190" },
-      { label: "/", value: "191" }, { label: "`", value: "192" }, { label: "[", value: "219" },
-      { label: "\\", value: "220" }, { label: "]", value: "221" }, { label: "'", value: "222" },
-  ]},
-  { group: "Modifiers & Special", options: [
-      { label: "Enter", value: "13" }, { label: "Escape", value: "27" }, { label: "Tab", value: "9" },
-      { label: "Space", value: "32" }, { label: "Backspace", value: "8" }, { label: "Caps Lock", value: "20" },
-      { label: "Shift", value: "16" }, { label: "Control", value: "17" }, { label: "Alt", value: "18" },
-      { label: "Windows Key", value: "91" },
-  ]},
-  { group: "Arrow Keys", options: [
-      { label: "Up Arrow", value: "38" }, { label: "Down Arrow", value: "40" }, 
-      { label: "Left Arrow", value: "37" }, { label: "Right Arrow", value: "39" },
-  ]},
-  { group: "Function Keys (F1-F12)", options: [
-      { label: "F1", value: "112" }, { label: "F2", value: "113" }, { label: "F3", value: "114" },
-      { label: "F4", value: "115" }, { label: "F5", value: "116" }, { label: "F6", value: "117" },
-      { label: "F7", value: "118" }, { label: "F8", value: "119" }, { label: "F9", value: "120" },
-      { label: "F10", value: "121" }, { label: "F11", value: "122" }, { label: "F12", value: "123" },
-  ]},
-  { group: "Extended Function Keys (F13-F24)", options: [
-      { label: "F13", value: "124" }, { label: "F14", value: "125" }, { label: "F15", value: "126" },
-      { label: "F16", value: "127" }, { label: "F17", value: "128" }, { label: "F18", value: "129" },
-      { label: "F19", value: "130" }, { label: "F20", value: "131" }, { label: "F21", value: "132" },
-      { label: "F22", value: "133" }, { label: "F23", value: "134" }, { label: "F24", value: "135" },
-  ]},
-  { group: "Numpad", options: [
-      { label: "Numpad 0", value: "96" }, { label: "Numpad 1", value: "97" }, { label: "Numpad 2", value: "98" },
-      { label: "Numpad 3", value: "99" }, { label: "Numpad 4", value: "100" }, { label: "Numpad 5", value: "101" },
-      { label: "Numpad 6", value: "102" }, { label: "Numpad 7", value: "103" }, { label: "Numpad 8", value: "104" },
-      { label: "Numpad 9", value: "105" }, { label: "Numpad *", value: "106" }, { label: "Numpad +", value: "107" },
-      { label: "Numpad -", value: "109" }, { label: "Numpad .", value: "110" }, { label: "Numpad /", value: "111" },
-  ]},
-  { group: "Navigation", options: [
-      { label: "Insert", value: "45" }, { label: "Delete", value: "46" }, { label: "Home", value: "36" },
-      { label: "End", value: "35" }, { label: "Page Up", value: "33" }, { label: "Page Down", value: "34" },
-  ]}
-];
+
+
 
 function Dashboard() {
   // Profile Management State
@@ -414,839 +364,89 @@ function Dashboard() {
     ? (draftProfile.buttons[selectedButtonId] || { id: selectedButtonId, label: selectedButtonId, color: 'rgba(255, 255, 255, 0.08)' })
     : null;
 
-  const renderActionPayloadEditor = (act: DeckButtonAction | undefined, index: number) => {
-    if (!act) return null;
-    const updateAction = (payload: string) => {
-      if (!selectedButtonId) return;
-      const currentActs = selectedButtonData?.actions || (selectedButtonData?.action ? [selectedButtonData.action] : []);
-      const newActs = [...currentActs];
-      newActs[index] = { type: act.type, payload };
-      handleButtonUpdate(selectedButtonId, { actions: newActs });
-    };
-
-    return (
-      <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        {act.type === 'delay' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Delay (Milliseconds)</label>
-            <input 
-              type="number" 
-              placeholder="1000"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>1000 ms = 1 second. Execution will pause here.</p>
-          </div>
-        )}
-
-        {act.type === 'open_url' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Payload</label>
-            <input 
-              type="text" 
-              placeholder="https://youtube.com or C:/app.exe"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Enter a web link or an absolute file path.</p>
-          </div>
-        )}
-
-        {act.type === 'open_folder' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Target Folder</label>
-            <select 
-              value={act.payload || ''}
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            >
-              <option value="" disabled>Select a profile...</option>
-              {Object.values(profiles).map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Instantly swap your layout to this profile.</p>
-          </div>
-        )}
-
-        {act.type === 'type_text' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Text to Type</label>
-            <textarea 
-              placeholder="Hello World! This is a test."
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', resize: 'vertical', minHeight: '60px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Type long paragraphs here. All uppercase letters and symbols are perfectly preserved.</p>
-          </div>
-        )}
-
-        {act.type === 'run_macro' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Macro Sequence</label>
-            <input 
-              type="text" 
-              placeholder="{+CTRL}c{-CTRL}"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Wrap modifiers in brackets. Examples: {'{+CTRL}c{-CTRL}'} or {'{ENTER}'}. Do not use for plain text.</p>
-
-          </div>
-        )}
-
-        {act.type === 'sys_send_keypress' && (() => {
-          let currentPayload: { modifiers: number[], key: string } = { modifiers: [], key: '' };
-          if (act.payload) {
-            try {
-              const parsed = JSON.parse(act.payload);
-              if (parsed.key !== undefined) currentPayload = parsed;
-              else currentPayload.key = act.payload;
-            } catch (e) {
-              currentPayload.key = act.payload;
-            }
-          }
-
-          const handleComboUpdate = (mods: number[], key: string) => {
-            updateAction(JSON.stringify({ modifiers: mods, key }));
-          };
-
-          const toggleMod = (mod: number) => {
-            const mods = currentPayload.modifiers.includes(mod) 
-              ? currentPayload.modifiers.filter(m => m !== mod)
-              : [...currentPayload.modifiers, mod];
-            handleComboUpdate(mods, currentPayload.key);
-          };
-
-          return (
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Combo Builder</label>
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: '#111', borderRadius: '4px', border: '1px solid #555' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                  <input type="checkbox" checked={currentPayload.modifiers.includes(17)} onChange={() => toggleMod(17)} /> Ctrl
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                  <input type="checkbox" checked={currentPayload.modifiers.includes(16)} onChange={() => toggleMod(16)} /> Shift
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                  <input type="checkbox" checked={currentPayload.modifiers.includes(18)} onChange={() => toggleMod(18)} /> Alt
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                  <input type="checkbox" checked={currentPayload.modifiers.includes(91)} onChange={() => toggleMod(91)} /> Win
-                </label>
-              </div>
-              <select 
-                value={currentPayload.key}
-                onChange={e => handleComboUpdate(currentPayload.modifiers, e.target.value)}
-                style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-              >
-                <option value="" disabled>Select a main key...</option>
-                {KEYPRESS_OPTIONS.map((group, i) => (
-                  <optgroup key={i} label={group.group}>
-                    {group.options.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Select modifiers and a main key to trigger them simultaneously via the Windows API.</p>
-            </div>
-          );
-        })()}
-
-        {act.type === 'obs_switch_scene' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Scene Name</label>
-            <input 
-              type="text" 
-              placeholder="Gameplay"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Scene to switch to.</p>
-          </div>
-        )}
-
-        {act.type === 'obs_toggle_source' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Source Name</label>
-            <input 
-              type="text" 
-              placeholder="Webcam"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Source to toggle in the current scene.</p>
-          </div>
-        )}
-
-        {act.type === 'obs_toggle_mute' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Audio Source Name</label>
-            <input 
-              type="text" 
-              placeholder="Mic/Aux"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The exact name of the OBS Audio source to toggle mute.</p>
-          </div>
-        )}
-
-        {act.type === 'obs_take_screenshot' && (
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Save Folder Path</label>
-            <input 
-              type="text" 
-              placeholder="C:\Users\Name\Pictures"
-              value={act.payload || ''} 
-              onChange={e => updateAction(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-            />
-            <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>The absolute path to the folder where the screenshot of the Current Program Scene will be saved.</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div style={{ display: 'flex', color: 'white', fontFamily: "'Outfit', sans-serif", backgroundColor: '#0f0f13', width: '100vw', height: '100vh', boxSizing: 'border-box' }}>
-      
-      {/* Left Sidebar */}
-      <div style={{ width: '260px', backgroundColor: 'rgba(20, 20, 25, 0.8)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', padding: '20px', flexShrink: 0 }}>
-        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-          <img src="/vsdLogo.png" alt="Virtual Stream Deck Logo" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
-        </div>
-        <h2 style={{ margin: '0 0 10px 0', fontSize: '1.4rem', color: '#fff', textAlign: 'center' }}>Virtual Stream Deck</h2>
-        <h3 style={{ margin: '0 0 40px 0', fontSize: '1.0rem', color: '#fff', textAlign: 'center', fontStyle: 'italic' }}>By MD Pastor</h3>
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#0f0f14', color: 'white', fontFamily: 'sans-serif' }}>
+      <div style={{ width: '80px', backgroundColor: '#0a0a0d', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', gap: '15px' }}>
         <button 
           onClick={() => setCurrentTab('editor')}
-          style={{ padding: '12px 16px', backgroundColor: currentTab === 'editor' ? 'rgba(57, 108, 216, 0.2)' : 'transparent', color: currentTab === 'editor' ? '#74b9ff' : '#aaa', border: 'none', borderLeft: currentTab === 'editor' ? '3px solid #74b9ff' : '3px solid transparent', borderRadius: '0 8px 8px 0', textAlign: 'left', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', transition: 'all 0.2s' }}
+          style={{ width: '50px', height: '50px', borderRadius: '12px', backgroundColor: currentTab === 'editor' ? 'rgba(57, 108, 216, 0.2)' : 'transparent', color: currentTab === 'editor' ? '#74b9ff' : '#666', border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title="Profile Editor"
         >
-          🎨 Editor
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         </button>
         <button 
           onClick={() => setCurrentTab('settings')}
-          style={{ padding: '12px 16px', backgroundColor: currentTab === 'settings' ? 'rgba(57, 108, 216, 0.2)' : 'transparent', color: currentTab === 'settings' ? '#74b9ff' : '#aaa', border: 'none', borderLeft: currentTab === 'settings' ? '3px solid #74b9ff' : '3px solid transparent', borderRadius: '0 8px 8px 0', textAlign: 'left', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.2s' }}
+          style={{ width: '50px', height: '50px', borderRadius: '12px', backgroundColor: currentTab === 'settings' ? 'rgba(57, 108, 216, 0.2)' : 'transparent', color: currentTab === 'settings' ? '#74b9ff' : '#666', border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title="Global Settings"
         >
-          ⚙️ Settings
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
       </div>
 
-      {/* Main Content Area */}
-      <div style={{ flex: 1, padding: '30px', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto', boxSizing: 'border-box' }}>
-        
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '30px', overflowY: 'auto', minWidth: 0 }}>
         {currentTab === 'editor' && (
           <>
-            {/* Top Profile Manager */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ padding: '15px', backgroundColor: 'rgba(40,40,45,0.6)', backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Editing Profile:</label>
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <select 
-                      value={activeProfileId} 
-                      onChange={(e) => handleSwitchProfile(e.target.value)}
-                      style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      {Object.values(profiles).map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} {p.id === equippedProfileId ? '(Equipped)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <button 
-                      onClick={() => {
-                        const newName = window.prompt("Enter new profile name:", draftProfile.name);
-                        if (newName && newName.trim() !== '') updateDraft({ ...draftProfile, name: newName.trim() });
-                      }}
-                      style={{ padding: '6px 10px', cursor: 'pointer', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px' }}
-                      title="Rename Profile"
-                    >
-                      ✏️
-                    </button>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '10px' }}>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Linked App (.exe):</label>
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <input 
-                      type="text" 
-                      placeholder="obs64.exe"
-                      value={draftProfile.linkedApp || ''}
-                      onChange={(e) => updateDraft({ ...draftProfile, linkedApp: e.target.value })}
-                      style={{ padding: '6px', backgroundColor: '#111', color: 'white', border: '1px solid #555', borderRadius: '4px', width: '120px' }}
-                    />
-                    <button 
-                      onClick={() => {
-                        isDetectingAppRef.current = !isDetectingApp;
-                        setIsDetectingApp(!isDetectingApp);
-                      }}
-                      style={{ 
-                        padding: '6px 10px', 
-                        cursor: 'pointer', 
-                        backgroundColor: isDetectingApp ? '#d32f2f' : '#333', 
-                        color: 'white', 
-                        border: '1px solid #555', 
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        animation: isDetectingApp ? 'pulse-red 1.5s infinite' : 'none'
-                      }}
-                      title="Detect Active App"
-                    >
-                      {isDetectingApp ? "Listening..." : "🎯 Detect"}
-                    </button>
-                  </div>
-                </div>
-
-                <button onClick={handleCreateNewProfile} style={{ padding: '6px 12px', cursor: 'pointer', marginLeft: '10px' }}>+ New</button>
-                
-                <div style={{ width: '1px', height: '30px', backgroundColor: '#555' }} />
-                
-                <button 
-                  onClick={handleSaveProfile} 
-                  disabled={!hasUnsavedChanges}
-                  style={{ 
-                    padding: '6px 16px', 
-                    cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
-                    backgroundColor: hasUnsavedChanges ? '#2e7d32' : '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {hasUnsavedChanges ? "💾 Save Changes" : "Saved"}
-                </button>
-
-                {hasUnsavedChanges && (
-                  <button 
-                    onClick={handleDiscardChanges}
-                    style={{ 
-                      padding: '6px 16px', 
-                      cursor: 'pointer',
-                      backgroundColor: '#555',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontWeight: 'bold',
-                      marginLeft: '10px'
-                    }}
-                  >
-                    Discard
-                  </button>
-                )}
-                
-                <button 
-                  onClick={handleEquipProfile}
-                  disabled={activeProfileId === equippedProfileId || hasUnsavedChanges}
-                  style={{ 
-                    padding: '6px 16px', 
-                    cursor: (activeProfileId !== equippedProfileId && !hasUnsavedChanges) ? 'pointer' : 'not-allowed',
-                    backgroundColor: (activeProfileId === equippedProfileId) ? '#1565c0' : '#444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {activeProfileId === equippedProfileId ? "Equipped" : "Equip Profile"}
-                </button>
-
-                <button 
-                  onClick={handleDeleteProfile}
-                  disabled={Object.keys(profiles).length <= 1}
-                  style={{ 
-                    padding: '6px 12px', 
-                    cursor: Object.keys(profiles).length <= 1 ? 'not-allowed' : 'pointer',
-                    backgroundColor: '#d32f2f',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontWeight: 'bold',
-                    marginLeft: '10px'
-                  }}
-                >
-                  🗑️ Delete
-                </button>
-              </div>
-            </div>
+            <ProfileManagerBar
+              profiles={profiles}
+              activeProfileId={activeProfileId}
+              handleSwitchProfile={handleSwitchProfile}
+              equippedProfileId={equippedProfileId}
+              isDetectingApp={isDetectingApp}
+              setIsDetectingApp={setIsDetectingApp}
+              isDetectingAppRef={isDetectingAppRef}
+              draftProfile={draftProfile}
+              handleCreateNewProfile={handleCreateNewProfile}
+              hasUnsavedChanges={hasUnsavedChanges}
+              handleSaveProfile={handleSaveProfile}
+              handleDiscardChanges={handleDiscardChanges}
+              handleEquipProfile={handleEquipProfile}
+              handleDeleteProfile={handleDeleteProfile}
+            />
             
-            {/* Editor Content Split */}
-            <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0 }}>
-              
-              {/* Left Column: Grid Layout Canvas */}
-              <div style={{ flex: 2, padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0 }}>Grid Layout</h3>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <label>Cols:</label>
-              <input type="number" value={draftProfile.columns} onChange={e => handleDimensionChange('columns', parseInt(e.target.value))} style={{ width: '50px' }} />
-              <label>Rows:</label>
-              <input type="number" value={draftProfile.rows} onChange={e => handleDimensionChange('rows', parseInt(e.target.value))} style={{ width: '50px' }} />
-            </div>
-          </div>
-
-          <div
-            ref={gridRef}
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: `repeat(${draftProfile.columns}, 1fr)`, 
-              gap: '10px',
-              backgroundColor: '#111',
-              padding: '20px',
-              borderRadius: '8px'
-            }}
-          >
-            {Array.from({ length: draftProfile.rows }).map((_, y) => (
-              Array.from({ length: draftProfile.columns }).map((_, x) => {
-                const id = `${x},${y}`;
-                const btnData = draftProfile.buttons[id];
-                const isSelected = selectedButtonId === id;
-                const isBeingDragged = dragSourceId === id;
-                const isDropTarget = dragOverId === id && dragSourceId !== id;
-                
-                let stateCssClass = '';
-                if (btnData?.action) {
-                  switch (btnData.action.type) {
-                    case 'obs_toggle_record': stateCssClass = obsState.isRecording ? 'state-pulse-red' : ''; break;
-                    case 'obs_toggle_stream': stateCssClass = obsState.isStreaming ? 'state-pulse-red' : ''; break;
-                    case 'obs_toggle_virtual_cam': stateCssClass = obsState.isVirtualCamOn ? 'state-pulse-blue' : ''; break;
-                    case 'obs_switch_scene': stateCssClass = obsState.currentScene === btnData.action.payload ? 'state-pulse-blue' : ''; break;
-                    case 'obs_toggle_mute': stateCssClass = obsState.mutedInputs[btnData.action.payload || ''] === true ? 'state-pulse-yellow' : ''; break;
-                  }
-                }
-
-                return (
-                  <div 
-                    key={id}
-                    data-cell-id={id}
-                    onClick={() => { if (!isDraggingRef.current) setSelectedButtonId(id); }}
-                    onMouseDown={(e) => handleMouseDown(e, id)}
-                    className={stateCssClass}
-                    style={{
-                      aspectRatio: '1 / 1',
-                      backgroundColor: btnData?.color || 'rgba(255, 255, 255, 0.08)',
-                      color: 'white',
-                      border: isSelected ? '2px solid #396cd8' : (isDropTarget ? '2px dashed #4caf50' : '1px solid rgba(255,255,255,0.1)'),
-                      boxShadow: 'none',
-                      opacity: isBeingDragged ? 0.4 : 1,
-                      transform: isDropTarget ? 'scale(1.05)' : 'scale(1)',
-                      transition: 'transform 0.1s ease, opacity 0.1s ease',
-                      borderRadius: '8px',
-                      cursor: dragSourceId ? 'grabbing' : 'grab',
-                      fontWeight: 'bold',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '5px',
-                      overflow: 'hidden',
-                      padding: '5px',
-                      userSelect: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    {btnData?.imageUrl ? (
-                      <img src={btnData.imageUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', pointerEvents: 'none' }} />
-                    ) : btnData?.iconName && CURATED_ICONS[btnData.iconName as IconName] ? (
-                      <div style={{ pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {(() => {
-                          const Icon = CURATED_ICONS[btnData.iconName as IconName];
-                          return <Icon size={32} color={btnData.fontColor || 'white'} />;
-                        })()}
-                      </div>
-                    ) : null}
-                    <span style={{ 
-                      fontSize: '0.8rem', 
-                      whiteSpace: 'nowrap', 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      maxWidth: '100%',
-                      color: btnData?.fontColor || 'white',
-                      pointerEvents: 'none'
-                    }}>
-                      {btnData?.label || id}
-                    </span>
-                  </div>
-                );
-              })
-            ))}
-            </div>
-          </div>
-
-            {/* Right Column: Button Editor */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', flexGrow: 1, overflowY: 'auto' }}>
-                <h3 style={{ marginTop: 0 }}>Button Editor</h3>
-            {selectedButtonData ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <p style={{ margin: 0, color: '#aaa' }}>Editing Button [{selectedButtonData.id}]</p>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>Label</label>
-                  <input 
-                    type="text" 
-                    value={selectedButtonData.label} 
-                    onChange={e => handleButtonUpdate(selectedButtonData.id, { label: e.target.value })}
-                    style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '15px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Background</label>
-                    <input 
-                      type="color" 
-                      value={selectedButtonData.color.startsWith('#') ? selectedButtonData.color : '#333333'} 
-                      onChange={e => handleButtonUpdate(selectedButtonData.id, { color: e.target.value })}
-                      style={{ width: '100%', height: '40px', cursor: 'pointer' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Text Color</label>
-                    <input 
-                      type="color" 
-                      value={selectedButtonData.fontColor?.startsWith('#') ? selectedButtonData.fontColor : '#ffffff'} 
-                      onChange={e => handleButtonUpdate(selectedButtonData.id, { fontColor: e.target.value })}
-                      style={{ width: '100%', height: '40px', cursor: 'pointer' }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>Icon Image</label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    {selectedButtonData.imageUrl && (
-                      <img 
-                        src={selectedButtonData.imageUrl} 
-                        alt="icon preview" 
-                        style={{ width: '40px', height: '40px', objectFit: 'contain', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px' }} 
-                      />
-                    )}
-                    <input 
-                      key={selectedButtonData.id}
-                      id="icon-upload-input"
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleImageUpload(selectedButtonData.id, e.target.files[0]);
-                        }
-                      }}
-                      style={{ flexGrow: 1 }}
-                    />
-                    {selectedButtonData.imageUrl && (
-                      <button 
-                        onClick={() => {
-                          handleButtonUpdate(selectedButtonData.id, { imageUrl: '' });
-                          const input = document.getElementById('icon-upload-input') as HTMLInputElement;
-                          if (input) input.value = '';
-                        }}
-                        style={{ padding: '6px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                        title="Remove Icon"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>Built-in Icon</label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    {selectedButtonData.iconName && CURATED_ICONS[selectedButtonData.iconName as IconName] ? (
-                      <div style={{ padding: '8px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px', display: 'flex' }}>
-                        {(() => {
-                          const Icon = CURATED_ICONS[selectedButtonData.iconName as IconName];
-                          return <Icon size={24} color="white" />;
-                        })()}
-                      </div>
-                    ) : null}
-                    <button 
-                      onClick={() => setIsIconPickerOpen(true)}
-                      style={{ padding: '8px 12px', flexGrow: 1, backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Choose Built-in Icon...
-                    </button>
-                    {selectedButtonData.iconName && (
-                      <button 
-                        onClick={() => handleButtonUpdate(selectedButtonData.id, { iconName: undefined })}
-                        style={{ padding: '6px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                        title="Remove Built-in Icon"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <label style={{ fontWeight: 'bold', margin: 0 }}>Action Engine (Chain)</label>
-                  </div>
-                  
-                  {(() => {
-                    const actions = selectedButtonData.actions || (selectedButtonData.action ? [selectedButtonData.action] : []);
-                    if (actions.length === 0) return <p style={{ color: '#aaa', fontSize: '0.9rem', fontStyle: 'italic', textAlign: 'center', margin: '20px 0' }}>No actions configured.</p>;
-
-                    return actions.map((act, index) => (
-                      <div key={index} style={{ marginBottom: index === actions.length - 1 ? 0 : '15px', padding: '15px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.9rem', color: '#aaa', fontWeight: 'bold' }}>Action {index + 1}</span>
-                          <button 
-                            onClick={() => {
-                              const newActs = [...actions];
-                              newActs.splice(index, 1);
-                              handleButtonUpdate(selectedButtonData.id, { actions: newActs });
-                            }}
-                            style={{ background: 'transparent', border: '1px solid rgba(255,85,85,0.3)', color: '#ff5555', cursor: 'pointer', fontSize: '0.8rem', padding: '4px 8px', borderRadius: '4px' }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Action Type</label>
-                          <button 
-                            onClick={() => setActiveActionIndex(index)}
-                            style={{ 
-                              width: '100%', padding: '12px 15px', boxSizing: 'border-box', 
-                              backgroundColor: 'rgba(57, 108, 216, 0.1)', color: '#74b9ff', 
-                              border: '1px solid rgba(57, 108, 216, 0.4)', borderRadius: '8px', 
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                              transition: 'all 0.2s', textAlign: 'left'
-                            }}
-                          >
-                            <span style={{ display: 'flex', alignItems: 'center' }}>
-                              {(() => {
-                                const actionDef = act.type ? ACTION_DEFS[act.type] : null;
-                                if (actionDef) {
-                                  const Icon = actionDef.icon;
-                                  return <Icon size={28} />;
-                                }
-                                return '🚫';
-                              })()}
-                            </span>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontWeight: 'bold', fontSize: '1rem', color: 'white' }}>
-                                {act.type && ACTION_DEFS[act.type] ? ACTION_DEFS[act.type].label : 'None'}
-                              </span>
-                              <span style={{ fontSize: '0.8rem', color: '#74b9ff' }}>Click to change action...</span>
-                            </div>
-                          </button>
-                        </div>
-
-                        {renderActionPayloadEditor(act, index)}
-                      </div>
-                    ));
-                  })()}
-
-                  <button 
-                    onClick={() => {
-                      const currentActs = selectedButtonData.actions || (selectedButtonData.action ? [selectedButtonData.action] : []);
-                      handleButtonUpdate(selectedButtonData.id, { actions: [...currentActs, { type: 'none', payload: '' }] });
-                    }}
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      backgroundColor: 'rgba(57, 108, 216, 0.15)', 
-                      color: '#74b9ff', 
-                      border: '1px dashed rgba(57, 108, 216, 0.5)', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer', 
-                      fontSize: '0.95rem', 
-                      fontWeight: 'bold',
-                      marginTop: '10px',
-                      transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.25)'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(57, 108, 216, 0.15)'}
-                  >
-                    + Add Action
-                  </button>
-                </div>
-
-                <div style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '10px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Hardware Trigger</label>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem' }}>Physical Key Binding</label>
-                  <HotkeyInput 
-                    value={selectedButtonData.triggerHotkey || ''} 
-                    onChange={val => handleButtonUpdate(selectedButtonData.id, { triggerHotkey: val })} 
-                  />
-                  <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#888' }}>Pressing this key will silently trigger the Action Payload.</p>
-                </div>
-
-              </div>
-            ) : (
-              <p style={{ color: '#aaa' }}>Click a button in the grid to edit its appearance.</p>
-            )}
-          </div>
-
-              </div>
+            <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0, marginTop: '20px' }}>
+              <GridCanvas
+                draftProfile={draftProfile}
+                handleDimensionChange={handleDimensionChange}
+                gridRef={gridRef}
+                selectedButtonId={selectedButtonId}
+                setSelectedButtonId={setSelectedButtonId}
+                dragSourceId={dragSourceId}
+                dragOverId={dragOverId}
+                isDraggingRef={isDraggingRef}
+                handleMouseDown={handleMouseDown}
+                obsState={obsState}
+              />
+              <ButtonEditorSidebar
+                selectedButtonData={selectedButtonData}
+                selectedButtonId={selectedButtonId}
+                handleButtonUpdate={handleButtonUpdate}
+                handleImageUpload={handleImageUpload}
+                setIsIconPickerOpen={setIsIconPickerOpen}
+                setActiveActionIndex={setActiveActionIndex}
+                profiles={profiles}
+              />
             </div>
           </>
         )}
 
         {currentTab === 'settings' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
-            <h2 style={{ margin: '0 0 10px 0' }}>Global Settings</h2>
-            
-            <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '1rem', fontWeight: 'bold', marginBottom: '8px' }}>OSD Toggle Hotkey</label>
-                <HotkeyInput 
-                  value={draftProfile.osdHotkey || ''} 
-                  onChange={val => updateDraft({ ...draftProfile, osdHotkey: val })} 
-                />
-                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>Must be saved and equipped to take effect.</p>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input 
-                  type="checkbox" 
-                  id="requireOsdVisible"
-                  checked={!!draftProfile.requireOsdVisible}
-                  onChange={e => updateDraft({ ...draftProfile, requireOsdVisible: e.target.checked })}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <label htmlFor="requireOsdVisible" style={{ fontSize: '0.95rem', cursor: 'pointer' }}>
-                  Require Virtual Deck Overlay to be visible for hotkeys to work
-                </label>
-              </div>
-            </div>
-
-            <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
-              <h3 style={{ margin: '0 0 15px 0' }}>System Preferences</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input 
-                  type="checkbox" 
-                  id="runOnStartup"
-                  checked={runOnStartup}
-                  onChange={async (e) => {
-                    const checked = e.target.checked;
-                    setRunOnStartup(checked);
-                    if (checked) {
-                      await enable();
-                    } else {
-                      await disable();
-                    }
-                  }}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <label htmlFor="runOnStartup" style={{ fontSize: '0.95rem', cursor: 'pointer' }}>
-                  Run on System Startup (Background)
-                </label>
-              </div>
-            </div>
-
-            <div style={{ padding: '25px', backgroundColor: 'rgba(30,30,35,0.6)', backdropFilter: 'blur(10px)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <h3 style={{ margin: '0 0 15px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                OBS Studio Connection
-                <span style={{ 
-                  fontSize: '0.8rem', 
-                  padding: '4px 10px', 
-                  borderRadius: '12px', 
-                  backgroundColor: obsStatus === 'connected' ? 'rgba(46, 125, 50, 0.5)' : (obsStatus === 'connecting' ? 'rgba(245, 124, 0, 0.5)' : 'rgba(211, 47, 47, 0.5)'),
-                  border: `1px solid ${obsStatus === 'connected' ? '#4caf50' : (obsStatus === 'connecting' ? '#ff9800' : '#f44336')}`,
-                  color: 'white'
-                }}>
-                  {obsStatus.toUpperCase()}
-                </span>
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>WebSocket URL</label>
-                  <input 
-                    type="text" 
-                    placeholder="ws://127.0.0.1:4455"
-                    value={obsUrl} 
-                    onChange={e => setObsUrl(e.target.value)}
-                    style={{ width: '100%', padding: '10px', boxSizing: 'border-box', backgroundColor: 'rgba(15,15,20,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.9rem', color: '#aaa', marginBottom: '5px' }}>Password</label>
-                  <input 
-                    type="password" 
-                    placeholder="OBS WebSocket Password (if any)"
-                    value={obsPassword} 
-                    onChange={e => setObsPassword(e.target.value)}
-                    style={{ width: '100%', padding: '10px', boxSizing: 'border-box', backgroundColor: 'rgba(15,15,20,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                  <button 
-                    onClick={async () => {
-                      try {
-
-                        await obsService.saveSettings(obsUrl, obsPassword);
-                        await obsService.connect();
-                      } catch (err: any) {
-                        alert("OBS Connection Failed: " + (err.message || JSON.stringify(err) || String(err)));
-                      }
-                    }}
-                    disabled={obsStatus === 'connected'}
-                    style={{ flex: 1, padding: '10px', cursor: obsStatus === 'connected' ? 'not-allowed' : 'pointer', backgroundColor: obsStatus === 'connected' ? '#333' : '#396cd8', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'all 0.2s' }}
-                  >
-                    Connect
-                  </button>
-                  <button 
-                    onClick={() => obsService.disconnect()}
-                    disabled={obsStatus === 'disconnected'}
-                    style={{ flex: 1, padding: '10px', cursor: obsStatus === 'disconnected' ? 'not-allowed' : 'pointer', backgroundColor: obsStatus === 'disconnected' ? '#333' : '#d32f2f', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'all 0.2s' }}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', gap: '15px' }}>
-               {hasUnsavedChanges && (
-                 <button 
-                   onClick={handleDiscardChanges} 
-                   style={{ 
-                     padding: '10px 20px', 
-                     cursor: 'pointer',
-                     backgroundColor: '#444',
-                     color: 'white',
-                     border: 'none',
-                     borderRadius: '8px',
-                     fontWeight: 'bold',
-                     transition: 'all 0.2s'
-                   }}
-                 >
-                   Discard Changes
-                 </button>
-               )}
-               <button 
-                  onClick={handleSaveProfile} 
-                  disabled={!hasUnsavedChanges}
-                  style={{ 
-                    padding: '10px 20px', 
-                    cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
-                    backgroundColor: hasUnsavedChanges ? '#4caf50' : '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: 'bold',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {hasUnsavedChanges ? "💾 Save All Changes" : "Everything is Saved"}
-                </button>
-            </div>
-          </div>
+          <SettingsView
+            draftProfile={draftProfile}
+            updateDraft={updateDraft}
+            runOnStartup={runOnStartup}
+            setRunOnStartup={setRunOnStartup}
+            obsStatus={obsStatus}
+            obsUrl={obsUrl}
+            setObsUrl={setObsUrl}
+            obsPassword={obsPassword}
+            setObsPassword={setObsPassword}
+            hasUnsavedChanges={hasUnsavedChanges}
+            handleDiscardChanges={handleDiscardChanges}
+            handleSaveProfile={handleSaveProfile}
+          />
         )}
-
       </div>
-      
+
       <IconPicker 
         isOpen={isIconPickerOpen} 
         onClose={() => setIsIconPickerOpen(false)} 

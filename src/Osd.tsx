@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-shell';
 import { register, unregister, isRegistered } from '@tauri-apps/plugin-global-shortcut';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { invoke } from '@tauri-apps/api/core';
-import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, loadBaseProfileId, DeckProfile, DEFAULT_PROFILE } from './store';
+import { loadProfiles, loadEquippedProfileId, saveEquippedProfileId, loadBaseProfileId, DeckProfile, DEFAULT_PROFILE, DeckButtonAction } from './store';
 import { CURATED_ICONS, IconName } from './IconPicker';
 import { obsService, ObsState } from './obsService';
 import './App.css';
