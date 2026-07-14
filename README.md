@@ -8,7 +8,7 @@
 
 Built with **Tauri (Rust) and React**, it is designed to be highly performant, consuming minimal system resources so your games run smoothly.
 
-![Dashboard Screenshot](./dashboard.png) _(Add your dashboard screenshot here!)_
+![Dashboard Screenshot](./dashboard.png) _Dashboard_
 
 ## Key Features
 
