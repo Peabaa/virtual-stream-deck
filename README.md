@@ -49,13 +49,13 @@ npm install
 npm start
 ```
 
-## 🎮 How to Use
+## How to Use
 
 1. **Open the Dashboard:** The main window allows you to configure your grid.
 2. **Add Actions:** Click any square to assign macros, application shortcuts, media controls, or OBS triggers.
 3. **Set your Hotkey:** Head to the Global Settings tab (gear icon) to set your OSD summon hotkey.
 4. **Link Apps:** Create a new profile, hit the `🎯 Detect` button, and click into your favorite game to bind that profile to it.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
