@@ -28,7 +28,7 @@ Built with **Tauri (Rust) and React**, it is designed to be highly performant, c
 - **Styling:** Vanilla CSS
 - **OBS Integration:** `obs-websocket-js`
 
-## etting Started
+## Getting Started
 
 ### Prerequisites
 
